@@ -10,7 +10,7 @@
   "scripts": {
     "start:api": "node src/server/start.mjs",
     "test": "node --test tests/*.test.mjs",
-    "test:ui": "node tests/ui-smoke.mjs && node tests/agency-smoke.mjs",
+    "test:ui": "node tests/ui-smoke.mjs && node tests/agency-smoke.mjs && node --test tests/delivery-ui.test.mjs",
     "test:all": "npm run test && npm run test:ui",
     "preview": "node src/server/start-preview.mjs"
   }

@@ -41,6 +41,7 @@ export function transitionWorkstream(w,command,payload,actor,expectedVersion){
  version(w,expectedVersion);role(actor,["management","staff"]);
  const p=payload||{},next=clone(w);
  if(command==="set_gate"){
+  if(next.status==="active")deny("Pause delivery before changing launch evidence");
   if(!requiredGates(next).includes(p.gate))deny("Invalid launch gate");
   if(typeof p.value!=="boolean")deny("Gate requires boolean");
   if(p.value===true&&String(p.evidence||"").trim().length<6)deny("Evidence reference required");
@@ -48,10 +49,12 @@ export function transitionWorkstream(w,command,payload,actor,expectedVersion){
   next.gateEvidence={...next.gateEvidence,[p.gate]:p.value?String(p.evidence).trim():null};
  }else if(command==="accept_handoff"){
   role(actor,["management"]);
+  if(next.status!=="pending")deny("Handoffs are accepted before launch");
   if(next.handoff?.status==="accepted")deny("Already accepted");
   if(next.gates?.signed_scope!==true||next.gates?.delivery_owner!==true||!next.scopeVersion)deny("Signed scope and named owner required");
   next.handoff={status:"accepted",by:actor.role,at:new Date().toISOString()};
  }else if(command==="verify_input"){
+  if(next.status==="active")deny("Pause delivery before re-verifying onboarding");
   if(!ONBOARDING_INPUTS.includes(p.input))deny("Unknown client input");
   if(next.inputs?.[p.input]?.status!=="submitted")deny("Input not submitted");
   if(String(p.evidence||"").trim().length<6)deny("Verification evidence required");
@@ -74,7 +77,8 @@ export function submitClientInput(w,input,note,actor,expectedVersion){
  version(w,expectedVersion);role(actor,["client"]);clientOwns(w,actor);
  if(!ONBOARDING_INPUTS.includes(input))deny("Unknown client input");
  if(!String(note||"").trim())deny("Description or reference required");
- if(w.status==="cancelled")deny("Cancelled workstream");
+ if(!["pending","paused"].includes(w.status))deny("Onboarding updates require pending or paused delivery; request a scope change");
+ if(String(note).trim().length>600)deny("Input note is too long");
  const next=clone(w);
  next.inputs={...next.inputs,[input]:{status:"submitted",note:String(note).trim(),evidence:null}};
  log(next,"client_input_submitted",actor,{input});
@@ -103,6 +107,7 @@ export function reviewLead(batch,leadId,decision,reason,actor,expectedVersion){
  if(!["delivered","partially_reviewed"].includes(batch.status))deny("Batch has not been delivered");
  if(!["accepted","rejected"].includes(decision))deny("Invalid decision");
  if(decision==="rejected"&&!String(reason||"").trim())deny("Rejection requires reason");
+ if(String(reason||"").length>300)deny("Feedback is too long");
  const next=clone(batch),item=next.items.find(x=>x.id===leadId);
  if(!item)deny("Lead not found");
  if(item.decision)deny("Already reviewed");

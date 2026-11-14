@@ -73,10 +73,11 @@ function offerLabel(w){return w.offer==="lead_engine"?(w.mode==="leads_only"?"Le
 function cardHead(w,h){return '<div class="spread"><div><span class="tiny muted">'+E(h,h.accountName(w.account))+' · '+E(h,offerLabel(w))+'</span><h2 class="delivery-title">'+E(h,w.title)+'</h2><span class="small muted">Scope: '+E(h,w.scopeVersion)+' · v'+E(h,w.version)+'</span></div>'+status(h,w.status)+'</div>'}
 function actionsForGates(w,h){
  const ready=policy.evaluateLaunch(w);
- const rows=policy.requiredGates(w).map(g=>{
+ const visibleGates=h.state.role==="client"?["signed_scope","client_approver","client_access","client_assets","measurement_ready"]:policy.requiredGates(w);
+ const rows=visibleGates.map(g=>{
   const yes=w.gates?.[g]===true;
   const icon=yes?"✓":"!";
-  const control=h.state.role==="client"?"":yes
+  const control=h.state.role==="client"||w.status==="active"?"":yes
    ?B(h,"Reopen","delivery-revoke-gate",w.id+"~"+g)
    :'<form class="delivery-inline" data-delivery-form="gate"><input type="hidden" name="workstream" value="'+E(h,w.id)+'"><input type="hidden" name="gate" value="'+E(h,g)+'"><label class="sr-only" for="gate-'+E(h,w.id)+"-"+E(h,g)+'">Evidence reference</label><input class="field delivery-field" id="gate-'+E(h,w.id)+"-"+E(h,g)+'" name="evidence" placeholder="Demo evidence ref" required minlength="6" maxlength="120">'+submitButton("Record")+'</form>';
   return '<li class="delivery-gate"><span class="delivery-flag '+(yes?"pass":"block")+'">'+icon+'</span><span>'+E(h,gateLabels[g]||fmt(g))+'</span>'+control+'</li>'
@@ -102,7 +103,7 @@ function onboarding(h){
  +'<div class="delivery-layout">'+ws.map(w=>'<section class="panel panel-pad">'+cardHead(w,h)+'<div class="delivery-input-list">'+policy.ONBOARDING_INPUTS.map(key=>{
  const entry=w.inputs?.[key]||{status:"needed"};
  let control="";
- if(h.state.role==="client")control='<form data-delivery-form="client-input" class="delivery-input-form"><input type="hidden" name="workstream" value="'+E(h,w.id)+'"><input type="hidden" name="input" value="'+E(h,key)+'"><label for="input-'+E(h,w.id)+E(h,key)+'" class="sr-only">Input note</label><textarea id="input-'+E(h,w.id)+E(h,key)+'" name="note" rows="2" maxlength="600" required placeholder="Reference or details — fictional examples only"></textarea>'+submitButton(entry.status==="verified"?"Resubmit for review":"Submit input")+'</form>';
+ if(h.state.role==="client"&&w.status!=="active")control='<form data-delivery-form="client-input" class="delivery-input-form"><input type="hidden" name="workstream" value="'+E(h,w.id)+'"><input type="hidden" name="input" value="'+E(h,key)+'"><label for="input-'+E(h,w.id)+E(h,key)+'" class="sr-only">Input note</label><textarea id="input-'+E(h,w.id)+E(h,key)+'" name="note" rows="2" maxlength="600" required placeholder="Reference or details — fictional examples only"></textarea>'+submitButton(entry.status==="verified"?"Resubmit for review":"Submit input")+'</form>';
  else if(entry.status==="submitted")control='<form data-delivery-form="verify-input" class="delivery-inline"><input type="hidden" name="workstream" value="'+E(h,w.id)+'"><input type="hidden" name="input" value="'+E(h,key)+'"><input class="field delivery-field" name="evidence" placeholder="Staff verification ref" minlength="6" maxlength="120" required>'+submitButton("Verify")+'</form>';
  return '<div class="delivery-input"><div class="spread"><strong>'+E(h,inputLabels[key])+'</strong>'+status(h,entry.status)+'</div>'+(entry.note?'<p class="small muted">'+E(h,entry.note)+'</p>':"")+control+'</div>';
  }).join("")+'</div></section>').join("")+'</div>';

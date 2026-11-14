@@ -2,14 +2,19 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 const staff=fs.readFileSync(new URL('../src/staff/staff-os.js',import.meta.url),'utf8');
+const delivery=fs.readFileSync(new URL('../src/delivery/delivery-os.js',import.meta.url),'utf8');
+const domain=fs.readFileSync(new URL('../src/domain/delivery-workflows.mjs',import.meta.url),'utf8');
+const domainScript=domain.replace(/^export /gm,'')+'\n;globalThis.deliveryPolicy={normaliseOffer,requiredGates,evaluateLaunch,transitionWorkstream,submitClientInput,checkBatch,reviewLead,ONBOARDING_INPUTS}';
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const handlers={},els={'#app':{innerHTML:''},'#overlay-root':{innerHTML:''}};
 const document={body:{classList:{toggle(){}},appendChild(){}},querySelector(s){return els[s]||null},addEventListener(t,fn){handlers[t]=fn},createElement(){return {setAttribute(){},remove(){}}}};
 const vals=new Map(),localStorage={getItem(k){return vals.get(k)||null},setItem(k,v){vals.set(k,v)}};
-const window={scrollTo(){}};
+const window={scrollTo(){},localStorage};
 const context=vm.createContext({document,window,localStorage,confirm(){return false},setTimeout(){},console,Date,Math,Intl,Number,JSON,Array,Set,Object,String,URL,Blob,FormData});
 vm.runInContext(staff,context,{filename:'staff-os.js'});
-vm.runInContext(app,context,{filename:'app.js'});
+vm.runInContext(delivery,context,{filename:'delivery-os.js'});
+vm.runInContext(domainScript,context,{filename:'delivery-workflows.mjs'});
+vm.runInContext(app.replace(/^import \* as deliveryPolicy from .*;\n/,''),context,{filename:'app.js'});
 const views={
  management:['overview','clients','crm','projects','calendar','paid','organic','leads','closing','approvals','tasks','assets','messages','reports','billing','team','support','settings'],
  staff:['overview','tasks','calendar','clients','paid','organic','leads','closing','approvals','projects','assets','messages','reports','support','settings'],
