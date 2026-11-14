@@ -54,7 +54,7 @@ function sales(h){return header(h,"Sales qualification & handover","Stage-gated 
  ["proposalRef","Proposal version"],["pricingBasis","Pricing basis"],
  ["signedScopeRef","Signed SOW reference"],["priceApprovalRef","Pricing approval"],
  ["deliveryOwner","Delivery owner"],["handoffRef","BM handoff reference"],["lossReason","Loss reason"]
- ].filter(x=>({Qualified:["buyer","need"],"Meeting booked":["meetingRef","nextAction"],Proposal:["proposalRef","pricingBasis"],Won:["signedScopeRef","priceApprovalRef"],Lost:["lossReason"],"Handover accepted":["deliveryOwner","handoffRef"]}[to]||[]).includes(x[0])),{id:d.id,to}) ).join("")+'</section>');
+ ].filter(x=>({Qualified:["buyer","need"],"Meeting booked":["meetingRef","nextAction"],Proposal:["proposalRef","pricingBasis"],Won:["signedScopeRef","priceApprovalRef"],Lost:["lossReason"],"Handover accepted":["deliveryOwner","handoffRef"]}[to]||[]).includes(x[0])),{id:d.id,to}) ).join(""));
  }).join("")+'</div>'}
 function outreach(h){return header(h,"SDR authorisations & suppression","Approval is required before logging outreach. Opt-outs stop subsequent attempts.")
  +'<div class="ops-grid">'+visible(db().outreach,h).map(o=>panel(h,o.title,'<p>'+h.pill(o.status)+' · '+e(h,h.accountName(o.account))+'</p><p class="small muted">'+(o.attempts?.length||0)+' logged attempts</p>'
@@ -132,7 +132,7 @@ function submit(kind,values,h){
  }else if(kind==="finance-update"){
   if(a.role!=="management")throw Error("Finance management role required");
   const f=find("finance",v.id,h);
-  const next={...f};for(const key of ["agencyFee","mediaSpend","labour","tools","dataCost"])next[key]=rules.calculateMargin({agencyFee:key==="agencyFee"?v[key]:0,mediaSpend:key==="mediaSpend"?v[key]:0,labour:key==="labour"?v[key]:0,tools:key==="tools"?v[key]:0,dataCost:key==="dataCost"?v[key]:0})&&Number(v[key]);
+  const next={...f};for(const key of ["agencyFee","mediaSpend","labour","tools","dataCost"])next[key]=Number(v[key]);
   rules.calculateMargin(next);replace("finance",next);log(kind,f.account,h);
  }else if(kind==="allocate"){
   if(a.role!=="management")throw Error("Manager required");

@@ -4,6 +4,9 @@ import vm from 'node:vm';
 const staff=fs.readFileSync(new URL('../src/staff/staff-os.js',import.meta.url),'utf8');
 const delivery=fs.readFileSync(new URL('../src/delivery/delivery-os.js',import.meta.url),'utf8');
 const domain=fs.readFileSync(new URL('../src/domain/delivery-workflows.mjs',import.meta.url),'utf8');
+const operations=fs.readFileSync(new URL('../src/operations/operations-os.js',import.meta.url),'utf8');
+const staffPolicy=fs.readFileSync(new URL('../src/domain/staff-operations.mjs',import.meta.url),'utf8');
+const staffPolicyScript=staffPolicy.replace(/^export /gm,'')+'\n;globalThis.staffPolicy={STAGES,ALLOWED,SEVERITIES,APPROVALS,advanceDeal,assessOutreach,reviewQuality,calculateMargin,commissionEligible,capacity,clientHealth}';
 const domainScript=domain.replace(/^export /gm,'')+'\n;globalThis.deliveryPolicy={normaliseOffer,requiredGates,evaluateLaunch,transitionWorkstream,submitClientInput,checkBatch,reviewLead,ONBOARDING_INPUTS}';
 const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
 const handlers={},els={'#app':{innerHTML:''},'#overlay-root':{innerHTML:''}};
@@ -13,8 +16,10 @@ const window={scrollTo(){},localStorage};
 const context=vm.createContext({document,window,localStorage,confirm(){return false},setTimeout(){},console,Date,Math,Intl,Number,JSON,Array,Set,Object,String,URL,Blob,FormData});
 vm.runInContext(staff,context,{filename:'staff-os.js'});
 vm.runInContext(delivery,context,{filename:'delivery-os.js'});
+vm.runInContext(operations,context,{filename:'operations-os.js'});
+vm.runInContext(staffPolicyScript,context,{filename:'staff-operations.mjs'});
 vm.runInContext(domainScript,context,{filename:'delivery-workflows.mjs'});
-vm.runInContext(app.replace(/^import \* as deliveryPolicy from .*;\n/,''),context,{filename:'app.js'});
+vm.runInContext(app.replace(/^import .*$/gm,''),context,{filename:'app.js'});
 const views={
  management:['overview','clients','crm','projects','calendar','paid','organic','leads','closing','approvals','tasks','assets','messages','reports','billing','team','support','settings'],
  staff:['overview','tasks','calendar','clients','paid','organic','leads','closing','approvals','projects','assets','messages','reports','support','settings'],

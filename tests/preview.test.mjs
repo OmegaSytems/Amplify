@@ -7,7 +7,7 @@ test("local website and portal preview routes are served without leaking other f
  server.listen(0,"127.0.0.1");await once(server,"listening");
  const port=server.address().port;
  try{
-  for(const route of ["/","/app","/site.css","/app.js","/src/staff/staff-os.js","/src/agency/agency-os.js","/src/delivery/delivery-os.js","/src/delivery/delivery-os.css","/src/domain/delivery-workflows.mjs"]){
+  for(const route of ["/","/app","/site.css","/app.js","/src/staff/staff-os.js","/src/agency/agency-os.js","/src/delivery/delivery-os.js","/src/delivery/delivery-os.css","/src/domain/delivery-workflows.mjs","/src/domain/staff-operations.mjs","/src/operations/operations-os.js","/src/operations/operations-os.css"]){
    const response=await fetch("http://127.0.0.1:"+port+route);
    assert.equal(response.status,200,route);
    assert.equal(response.headers.get("x-content-type-options"),"nosniff");
