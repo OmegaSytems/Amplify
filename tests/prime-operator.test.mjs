@@ -5,10 +5,10 @@ const customer="11111111-1111-4111-8111-111111111111";
 const grant="22222222-2222-4222-8222-222222222222";
 const staff="33333333-3333-4333-8333-333333333333";
 function setup(fetcher){
- return createPrimeOperatorClient({primeUrl:"https://prime-project.supabase.co",
-   publishableKey:"public-test-key",getAccessToken:async()=> "user-session-for-testing-only",fetcher});
+ return createPrimeOperatorClient({systemsUrl:"https://omega-systems.example.supabase.co",
+   systemsPublishableKey:"public-test-key",getSystemsAccessToken:async()=> "user-session-for-testing-only",fetcher});
 }
-test("assigned accounts list uses Prime user token, not a server secret",async()=>{
+test("assigned accounts use Omega Systems user token, not a server secret",async()=>{
  const calls=[];
  const api=setup(async(url,opts)=>{
    calls.push({url,opts});
@@ -25,7 +25,7 @@ test("no access grants never enumerates customer records",async()=>{
  const a=await setup(async()=>{calls++;return new Response("[]",{status:200});}).listAssignedAccounts();
  assert.deepEqual(a,[]);assert.equal(calls,1);
 });
-test("Prime database denials are surfaced rather than bypassed",async()=>{
+test("Omega Systems RLS denials are surfaced rather than bypassed",async()=>{
  const api=setup(async()=>new Response('{"message":"denied"}',{status:403}));
  await assert.rejects(api.listDrafts(customer),/Not authorised/);
 });

@@ -1,28 +1,23 @@
-# Amplify staff access to Nexus Prime — P0 handoff
+# Amplify staff connection to the Nexus Prime module of Omega Systems — P0 handoff
 
-The customer signs into Nexus Prime at Omega Systems, connects their own marketing
-accounts, and explicitly grants scopes to the listed Omega Amplify operator organisation.
-Omega Amplify staff do NOT get their credentials or a separate copy of their marketing data.
+**Correct boundary:** Omega Systems owns the website, `/prime` login, Auth, customer organisations, plans, AI Agents and the Nexus Prime customer experience. Nexus Prime is **not** another GitHub repository, Supabase project or independent account system. Omega Amplify owns only its staff operations.
 
-Implemented: src/integrations/prime-operator.mjs
-- Accepts a short-lived user access token from the shared Nexus Prime identity authority.
-- Lists only grants visible to that signed-in staff user in Prime.
-- Reads and edits customer marketing drafts through Prime's tenant-level RLS.
-- Operator managers can assign/remove verified staff using protected Prime RPCs.
-- Never accepts service-role credentials, auto-approves campaigns, spends advertising
-  budgets, books out-of-home inventory or publishes social posts.
+The customer signs into **Omega Systems**, connects their own marketing accounts in Nexus Prime when OAuth is implemented, and explicitly authorises Omega Amplify for selected marketing channels. Amplify staff use their **Omega Systems Auth identities** and per-customer assignments; they never receive the customer's password or a parallel customer account.
 
-Setup needed: actual Prime Supabase project and migration in Omega Systems;
-verified staff users registered as members of the trusted Omega Amplify operator
-organisation in Prime; true cross-domain SSO/session integration; a private
-staff dashboard connection and accessible audit/status UI; staging permission tests.
+## Code in this draft
+- `src/integrations/prime-operator.mjs` accepts `systemsUrl`, `systemsPublishableKey` and `getSystemsAccessToken`. These point to the **same Omega Systems Supabase backend and auth authority** used by the Nexus Prime module.
+- Staff can request assigned customer access, read/write permitted marketing drafts and use guarded operator-manager assignment RPCs.
+- Database table names `prime_*` identify an **Omega Systems module** only. No second Prime database is expected.
+- Access and revocation are checked by Omega Systems tenant RLS on each request. No service-role key, bypass, automatic approval, publishing or ad spending.
 
-Important: Amplify's own Supabase project is for the agency's internal operations.
-Do not duplicate Prime records or write to Prime using Amplify service-role keys.
-The legacy /app client role in Amplify is fictional browser-local preview data.
-It must be retired only AFTER Prime's real customer screens cover those workflows.
-Do not deploy the existing demo role switcher to real customers.
+## Remaining integration work
+1. Confirm the actual **Omega Systems Supabase project**, current auth configuration, organisation schema and existing customer/agent entitlement models. Only `omega-education-sydney` is accessible through the connected Supabase account at present; leave it untouched.
+2. Review and stage the Omega Systems module migration in the **Omega Systems database**, after checking for conflicting existing models.
+3. Register the verified Omega Amplify operator organisation and its staff as members in the Systems identity authority. Customer grants and operator-manager staff assignments must both be required.
+4. Wire the real Amplify staff application to shared Omega Systems login/SSO, inject the signed-in user's Systems access token and connect the staff screens. The API client alone does **not** make the existing demo portal live.
+5. Validate allowed/revoked/expired/unauthorised access and cross-business isolation in real staging.
+6. Add external marketing-provider OAuth and publishing only after customer authorisation and compliance checks.
 
-Run locally with Node 20+: node --test tests/prime-operator.test.mjs
-Release blockers: integration end-to-end browser test, actual session source,
-RLS security matrix, revocation propagation, CSP/CORS, rate limits and logs.
+Amplify's internal operational data may continue using a separate Amplify database. It must **not** duplicate the customer-facing canonical marketing records in Omega Systems. The old Amplify client portal is only a fictional localhost demo and should be retired *after* feature parity in Omega Systems.
+
+Run local tests with Node 20+: `node --test tests/prime-operator.test.mjs`. No deployment, production migration or GitHub Actions execution without reviewed staging verification.

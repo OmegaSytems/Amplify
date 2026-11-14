@@ -1,7 +1,7 @@
 /**
- * Nexus Prime -> Omega Amplify delegated staff integration.
- * Use only a Prime user's authenticated access token. NEVER a service-role key.
- * All access, including revocations and per-channel permissions, is enforced by Prime RLS.
+ * Omega Systems (Nexus Prime module) -> Omega Amplify delegated staff integration.
+ * Use only the signed-in user's OMEGA SYSTEMS Auth token. NEVER a service-role key.
+ * All customer access, including revocation and per-channel permissions, is enforced by Omega Systems RLS.
  * No token persistence and no automatic access to customer marketing accounts.
  */
 const UUID=/^[a-f\d]{8}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{4}-[a-f\d]{12}$/i;
@@ -11,27 +11,27 @@ function text(value){
  if(typeof value!=="string"||value.trim().length<1||value.length>200)throw new TypeError("Title must be 1–200 characters");
  return value.trim();
 }
-export function createPrimeOperatorClient({primeUrl,publishableKey,getAccessToken,fetcher=fetch}={}){
- if(typeof primeUrl!=="string"||(!/^https:\/\//.test(primeUrl)&&!/^http:\/\/127\.0\.0\.1(:\d+)?$/.test(primeUrl)))
-   throw new TypeError("Dedicated Prime HTTPS URL required");
- if(typeof publishableKey!=="string"||!publishableKey||typeof getAccessToken!=="function")
-   throw new TypeError("Prime public key and authenticated token supplier required");
- const url=primeUrl.replace(/\/+$/,"");
+export function createPrimeOperatorClient({systemsUrl,systemsPublishableKey,getSystemsAccessToken,fetcher=fetch}={}){
+ if(typeof systemsUrl!=="string"||(!/^https:\/\//.test(systemsUrl)&&!/^http:\/\/127\.0\.0\.1(:\d+)?$/.test(systemsUrl)))
+   throw new TypeError("Omega Systems backend HTTPS URL required");
+ if(typeof systemsPublishableKey!=="string"||!systemsPublishableKey||typeof getSystemsAccessToken!=="function")
+   throw new TypeError("Omega Systems public key and signed-in user's access-token supplier required");
+ const url=systemsUrl.replace(/\/+$/,"");
  async function call(path,{method="GET",body,returning=false}={}){
-   const token=await getAccessToken();
-   if(typeof token!=="string"||token.length<12)throw new Error("Prime sign-in required");
+   const token=await getSystemsAccessToken();
+   if(typeof token!=="string"||token.length<12)throw new Error("Omega Systems sign-in required");
    const response=await fetcher(url+path,{
-     method,headers:{"apikey":publishableKey,"Authorization":"Bearer "+token,
+     method,headers:{"apikey":systemsPublishableKey,"Authorization":"Bearer "+token,
        "Content-Type":"application/json","Accept":"application/json",
        ...(returning?{"Prefer":"return=representation"}:{})},
      body:body===undefined?undefined:JSON.stringify(body)
    });
    const raw=await response.text();let parsed=null;
-   try{parsed=raw?JSON.parse(raw):null}catch{throw new Error("Prime returned invalid JSON")}
+   try{parsed=raw?JSON.parse(raw):null}catch{throw new Error("Omega Systems returned invalid JSON")}
    if(!response.ok){
-     if(response.status===401||response.status===403)throw new Error("Not authorised in Nexus Prime");
+     if(response.status===401||response.status===403)throw new Error("Not authorised for this Nexus Prime customer in Omega Systems");
      if(response.status===409)throw new Error("Record changed; refresh and retry");
-     throw new Error("Prime request failed ("+response.status+")");
+     throw new Error("Omega Systems request failed ("+response.status+")");
    }
    return parsed;
  }
