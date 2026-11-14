@@ -165,6 +165,15 @@ for(const role of ["management","staff"]){
   if(items.length)sections[role].push(["STAFF · "+group,items]);
  }
 }
+for(const role of ['management','staff']){
+ for(const group of ['CAMPAIGN OPERATIONS','PHYSICAL MEDIA','CONTENT & GROWTH','CLIENT SUCCESS','FINANCE & COMPLIANCE']){
+  const items=(window.AmplifyAgency?.catalog||[]).filter(x=>x[3]===group).map(([key,label,ico])=>[key,label,ico]);
+  if(items.length)sections[role].push(['AGENCY · '+group,items]);
+ }
+}
+const clientExtra=['agency-channels','agency-ooh','agency-creatives','agency-tracking','agency-email','agency-search'];
+const clientItems=(window.AmplifyAgency?.catalog||[]).filter(x=>clientExtra.includes(x[0])).map(([key,label,ico])=>[key,label,ico]);
+if(clientItems.length)sections.client.push(['ADDITIONAL SERVICES',clientItems]);
 const navItems=()=>sections[state.role].map(([heading,items])=>[heading,items.filter(([key])=>!({paid:'paid',organic:'organic',leads:'leads',closing:'closing'}[key])||subscribed(key))]).filter(([,items])=>items.length);
 const pageTitle = () => (navItems().flatMap(x=>x[1]).find(x=>x[0]===state.page)||['','Workspace'])[1];
 const pill=(s)=>{const v=String(s||'');const cls=/^(active|approved|paid|won|done|published|scheduled|qualified)$/i.test(v)?'green':/^(pending|review|awaiting|onboarding|proposal|draft|in progress|submitted|medium)$/i.test(v)?'yellow':/^(overdue|lost|cancelled|high|changes requested)$/i.test(v)?'red':'purple';return '<span class="pill '+cls+'">'+esc(v)+'</span>';};
@@ -317,7 +326,9 @@ function settingsPage(){
 }
 const renderers={overview,services:servicesPage,clients:clientsPage,crm:agencyCRM,projects:projectsPage,calendar:calendarPage,paid:campaignsPage,organic:organicPage,leads:leadsPage,closing:closingPage,approvals:approvalsPage,tasks:tasksPage,assets:assetsPage,messages:messagesPage,reports:reportsPage,billing:billingPage,team:teamPage,support:supportPage,settings:settingsPage};
 const staffEnvironment=()=>({state,data,esc,icon,pill,button,topHeader,panel,valueCard,tabular,td,date,money,accountName,render,goto,notify});
+const agencyEnvironment=()=>({state,data,esc,icon,pill,button,topHeader,panel,valueCard,tabular,td,date,money,accountName,render,goto,notify});
 for(const [key] of window.AmplifyStaff?.catalog||[])renderers[key]=()=>window.AmplifyStaff.render(key,staffEnvironment());
+for(const [key] of window.AmplifyAgency?.catalog||[])renderers[key]=()=>window.AmplifyAgency.render(key,agencyEnvironment());
 function render(){
  const currentPage=state.page==='client-detail'?'Client profile':pageTitle();
  const sidebar='<aside class="sidebar '+(state.sidebar?'open':'')+'" id="sidebar" aria-label="Workspace navigation"><div class="brand"><span class="brand-symbol">Ω</span><div><div class="brand-title">Amplify</div><div class="brand-sub">OMEGA SYSTEMS</div></div></div>'+navItems().map(([heading,items])=>'<div class="menu-block"><div class="menu-label">'+esc(heading)+'</div>'+items.map(([k,label,ico])=>'<button class="side-link '+(state.page===k?'active':'')+'" data-action="nav" data-id="'+k+'" '+(state.page===k?'aria-current="page"':'')+'>'+icon(ico,17)+' '+esc(label)+'</button>').join('')+'</div>').join('')+'<div class="sidebar-bottom"><div class="side-profile"><div class="avatar">Ω</div><div class="profile-meta"><b>Amplify workspace</b><small>'+esc(roleLabel())+' · Demo</small></div></div></div></aside>';
@@ -396,6 +407,7 @@ document.addEventListener('click',e=>{
  }
  const action=el.dataset.action, value=el.dataset.id;
  if(action.startsWith('staff-')&&window.AmplifyStaff?.click(action,value,staffEnvironment()))return;
+ if(action.startsWith('agency-')&&window.AmplifyAgency?.action(action,value,agencyEnvironment()))return;
  if(action==='nav'){goto(value);return;}
  if(action==='toggle-menu'){state.sidebar=!state.sidebar;render();return;}
  if(action==='switch-client'){state.role='client';state.account=value;goto('overview');return;}
@@ -405,7 +417,7 @@ document.addEventListener('click',e=>{
  if(action==='toggle-notifications'){state.notification=!state.notification;state.modal='';render();return;}
  if(action==='command'){state.command=true;state.commandQuery='';renderCommand();return;}
  if(action==='close-dialog'){state.modal='';state.command=false;state.modalId=null;render();return;}
- if(action==='reset-demo'){if(confirm('Reset demo data stored in this browser?')){data=initial();window.AmplifyStaff?.reset();save();goto('overview');notify('Demo data reset.');}return;}
+ if(action==='reset-demo'){if(confirm('Reset demo data stored in this browser?')){data=initial();window.AmplifyStaff?.reset();window.AmplifyAgency?.reset();save();goto('overview');notify('Demo data reset.');}return;}
  if(action==='export-leads'){csv(scoped(data.leads).map(x=>({Name:x.name,Company:x.company,Client:accountName(x.account),Source:x.source,Stage:x.stage,Value:x.value})),'amplify-demo-leads.csv');return;}
  if(action==='export-report'){csv(scoped(data.campaigns).map(x=>({Campaign:x.name,Client:accountName(x.account),Channel:x.channel,Spend:x.spend,Leads:x.leads,ROAS:x.roas})),'amplify-demo-report.csv');return;}
  if(action==='next-lead'){if(state.role!=='client')advance(data.leads,value,leadStages);return;}
@@ -432,6 +444,11 @@ document.addEventListener('submit',e=>{
  if(e.target.id==='staff-form'){
   e.preventDefault();
   window.AmplifyStaff?.submit(e.target.dataset.staffForm,Object.fromEntries(new FormData(e.target).entries()),staffEnvironment());
+  return;
+ }
+ if(e.target.id==='agency-form'){
+  e.preventDefault();
+  window.AmplifyAgency?.submit(e.target.dataset.agencyForm,Object.fromEntries(new FormData(e.target).entries()),agencyEnvironment());
   return;
  }
  if(e.target.id==='modal-form'){e.preventDefault();const kind=e.target.dataset.kind;const values=Object.fromEntries(new FormData(e.target).entries());createFromForm(kind,values);}
