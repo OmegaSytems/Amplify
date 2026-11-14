@@ -156,7 +156,379 @@ begin
     when 'permission' then
       update public.ooh_flights set permission_ref=v_ref where id=p_flight_id;
     when 'budget' then
-      if (p_payload->>'amount_cents') !~ '^[0-9]{1,15}$' then
+      if coalesce(p_payload->>'amount_cents','') !~ '^[0-9]{1,15}
+        raise exception 'Invalid amount' using errcode='22023';
+      end if;
+      v_amount := (p_payload->>'amount_cents')::bigint;
+      if v_amount<v.total_budget_cents then
+        raise exception 'Insufficient approved budget' using errcode='22023';
+      end if;
+      update public.ooh_flights set budget_approval_ref=v_ref,approved_budget_cents=v_amount where id=p_flight_id;
+    when 'creative' then
+      update public.ooh_flights set creative_ref=v_ref where id=p_flight_id;
+    when 'capacity' then
+      update public.ooh_flights set capacity_ref=v_ref where id=p_flight_id;
+    when 'tracking' then
+      if coalesce(p_payload->>'url','') not like 'https://%' then
+        raise exception 'HTTPS tracking URL required' using errcode='22023';
+      end if;
+      update public.ooh_flights set tracking_ref=v_ref,tracking_url=p_payload->>'url' where id=p_flight_id;
+    when 'book' then
+      if v.permission_ref is null or v.budget_approval_ref is null or v.creative_ref is null
+        or v.capacity_ref is null or v.tracking_ref is null or v.approved_budget_cents<v.total_budget_cents
+      then raise exception 'Required booking gates incomplete' using errcode='22023'; end if;
+      update public.ooh_flights set booking_ref=v_ref,status='Booked' where id=p_flight_id;
+    when 'install' then
+      if v.status<>'Booked' then raise exception 'Booking required' using errcode='22023'; end if;
+      update public.ooh_flights set install_proof_ref=v_ref,status='Live' where id=p_flight_id;
+    when 'inspect' then
+      if v.status<>'Live' then raise exception 'Live placement required' using errcode='22023'; end if;
+      update public.ooh_flights set inspection_ref=v_ref where id=p_flight_id;
+    when 'outcome' then
+      if v.status not in ('Live','Closed') then raise exception 'Live or closed flight required' using errcode='22023'; end if;
+      if coalesce(p_payload->>'responses','') !~ '^[0-9]{1,9}
+      then raise exception 'Invalid campaign outcomes' using errcode='22023'; end if;
+      v_responses:=(p_payload->>'responses')::int;
+      v_qualified:=(p_payload->>'qualified')::int;
+      v_spend:=(p_payload->>'spend_cents')::bigint;
+      if v_qualified>v_responses then raise exception 'Qualified count exceeds responses' using errcode='22023'; end if;
+      update public.ooh_flights set response_count=v_responses,qualified_count=v_qualified,spend_cents=v_spend where id=p_flight_id;
+    when 'close' then
+      if v.status<>'Live' or v.inspection_ref is null then
+        raise exception 'Live inspection required' using errcode='22023'; end if;
+      update public.ooh_flights set removal_ref=v_ref,status='Closed' where id=p_flight_id;
+    when 'cancel' then
+      if v.status not in ('Draft','Booked') then raise exception 'Cannot cancel at this stage' using errcode='22023'; end if;
+      update public.ooh_flights set cancel_reason=v_ref,status='Cancelled' where id=p_flight_id;
+  end case;
+
+  update public.ooh_flights set version=version+1,updated_at=now() where id=p_flight_id returning * into v;
+  insert into public.ooh_flight_events(organisation_id,flight_id,actor_id,action,payload)
+  values(v.organisation_id,v.id,p_actor_id,p_action,p_payload);
+  insert into public.client_ooh_updates(flight_id,organisation_id,title,format,status,starts_on,ends_on,updated_at)
+  values(v.id,v.organisation_id,v.name,v.format,v.status,v.starts_on,v.ends_on,now())
+  on conflict(flight_id) do update set status=excluded.status,updated_at=excluded.updated_at;
+  return v;
+end;
+$body$;
+
+revoke all on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) from public,anon,authenticated;
+grant execute on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) to service_role;
+
+
+-- Populate client-safe projection when a draft flight is first created.
+-- This avoids a client-visible record appearing only after the first action.
+create or replace function public.project_new_ooh_flight()
+returns trigger
+language plpgsql security invoker set search_path=''
+as $
+begin
+  insert into public.client_ooh_updates(flight_id,organisation_id,title,format,status,starts_on,ends_on,updated_at)
+  values(new.id,new.organisation_id,new.name,new.format,new.status,new.starts_on,new.ends_on,now())
+  on conflict(flight_id) do update
+    set title=excluded.title,format=excluded.format,status=excluded.status,
+        starts_on=excluded.starts_on,ends_on=excluded.ends_on,updated_at=excluded.updated_at;
+  return new;
+end $;
+revoke all on function public.project_new_ooh_flight() from public,anon,authenticated;
+drop trigger if exists project_new_ooh_flight on public.ooh_flights;
+create trigger project_new_ooh_flight
+after insert on public.ooh_flights for each row execute function public.project_new_ooh_flight();
+
+-- Historical evidence must not be editable by client sessions.
+-- Confirm all policies and grants in staging, and run Supabase security advisors
+-- before promoting the migration.
+ then
+        raise exception 'Invalid amount' using errcode='22023';
+      end if;
+      v_amount := (p_payload->>'amount_cents')::bigint;
+      if v_amount<v.total_budget_cents then
+        raise exception 'Insufficient approved budget' using errcode='22023';
+      end if;
+      update public.ooh_flights set budget_approval_ref=v_ref,approved_budget_cents=v_amount where id=p_flight_id;
+    when 'creative' then
+      update public.ooh_flights set creative_ref=v_ref where id=p_flight_id;
+    when 'capacity' then
+      update public.ooh_flights set capacity_ref=v_ref where id=p_flight_id;
+    when 'tracking' then
+      if (p_payload->>'url') not like 'https://%' then
+        raise exception 'HTTPS tracking URL required' using errcode='22023';
+      end if;
+      update public.ooh_flights set tracking_ref=v_ref,tracking_url=p_payload->>'url' where id=p_flight_id;
+    when 'book' then
+      if v.permission_ref is null or v.budget_approval_ref is null or v.creative_ref is null
+        or v.capacity_ref is null or v.tracking_ref is null or v.approved_budget_cents<v.total_budget_cents
+      then raise exception 'Required booking gates incomplete' using errcode='22023'; end if;
+      update public.ooh_flights set booking_ref=v_ref,status='Booked' where id=p_flight_id;
+    when 'install' then
+      if v.status<>'Booked' then raise exception 'Booking required' using errcode='22023'; end if;
+      update public.ooh_flights set install_proof_ref=v_ref,status='Live' where id=p_flight_id;
+    when 'inspect' then
+      if v.status<>'Live' then raise exception 'Live placement required' using errcode='22023'; end if;
+      update public.ooh_flights set inspection_ref=v_ref where id=p_flight_id;
+    when 'outcome' then
+      if v.status not in ('Live','Closed') then raise exception 'Live or closed flight required' using errcode='22023'; end if;
+      if (p_payload->>'responses') !~ '^[0-9]{1,9}$'
+        or (p_payload->>'qualified') !~ '^[0-9]{1,9}$'
+        or (p_payload->>'spend_cents') !~ '^[0-9]{1,15}$'
+      then raise exception 'Invalid campaign outcomes' using errcode='22023'; end if;
+      v_responses:=(p_payload->>'responses')::int;
+      v_qualified:=(p_payload->>'qualified')::int;
+      v_spend:=(p_payload->>'spend_cents')::bigint;
+      if v_qualified>v_responses then raise exception 'Qualified count exceeds responses' using errcode='22023'; end if;
+      update public.ooh_flights set response_count=v_responses,qualified_count=v_qualified,spend_cents=v_spend where id=p_flight_id;
+    when 'close' then
+      if v.status<>'Live' or v.inspection_ref is null then
+        raise exception 'Live inspection required' using errcode='22023'; end if;
+      update public.ooh_flights set removal_ref=v_ref,status='Closed' where id=p_flight_id;
+    when 'cancel' then
+      if v.status not in ('Draft','Booked') then raise exception 'Cannot cancel at this stage' using errcode='22023'; end if;
+      update public.ooh_flights set cancel_reason=v_ref,status='Cancelled' where id=p_flight_id;
+  end case;
+
+  update public.ooh_flights set version=version+1,updated_at=now() where id=p_flight_id returning * into v;
+  insert into public.ooh_flight_events(organisation_id,flight_id,actor_id,action,payload)
+  values(v.organisation_id,v.id,p_actor_id,p_action,p_payload);
+  insert into public.client_ooh_updates(flight_id,organisation_id,title,format,status,starts_on,ends_on,updated_at)
+  values(v.id,v.organisation_id,v.name,v.format,v.status,v.starts_on,v.ends_on,now())
+  on conflict(flight_id) do update set status=excluded.status,updated_at=excluded.updated_at;
+  return v;
+end;
+$body$;
+
+revoke all on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) from public,anon,authenticated;
+grant execute on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) to service_role;
+
+-- Historical evidence must not be editable by client sessions.
+-- Confirm all policies and grants in staging, and run Supabase security advisors
+-- before promoting the migration.
+
+        or coalesce(p_payload->>'qualified','') !~ '^[0-9]{1,9}
+      then raise exception 'Invalid campaign outcomes' using errcode='22023'; end if;
+      v_responses:=(p_payload->>'responses')::int;
+      v_qualified:=(p_payload->>'qualified')::int;
+      v_spend:=(p_payload->>'spend_cents')::bigint;
+      if v_qualified>v_responses then raise exception 'Qualified count exceeds responses' using errcode='22023'; end if;
+      update public.ooh_flights set response_count=v_responses,qualified_count=v_qualified,spend_cents=v_spend where id=p_flight_id;
+    when 'close' then
+      if v.status<>'Live' or v.inspection_ref is null then
+        raise exception 'Live inspection required' using errcode='22023'; end if;
+      update public.ooh_flights set removal_ref=v_ref,status='Closed' where id=p_flight_id;
+    when 'cancel' then
+      if v.status not in ('Draft','Booked') then raise exception 'Cannot cancel at this stage' using errcode='22023'; end if;
+      update public.ooh_flights set cancel_reason=v_ref,status='Cancelled' where id=p_flight_id;
+  end case;
+
+  update public.ooh_flights set version=version+1,updated_at=now() where id=p_flight_id returning * into v;
+  insert into public.ooh_flight_events(organisation_id,flight_id,actor_id,action,payload)
+  values(v.organisation_id,v.id,p_actor_id,p_action,p_payload);
+  insert into public.client_ooh_updates(flight_id,organisation_id,title,format,status,starts_on,ends_on,updated_at)
+  values(v.id,v.organisation_id,v.name,v.format,v.status,v.starts_on,v.ends_on,now())
+  on conflict(flight_id) do update set status=excluded.status,updated_at=excluded.updated_at;
+  return v;
+end;
+$body$;
+
+revoke all on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) from public,anon,authenticated;
+grant execute on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) to service_role;
+
+-- Historical evidence must not be editable by client sessions.
+-- Confirm all policies and grants in staging, and run Supabase security advisors
+-- before promoting the migration.
+ then
+        raise exception 'Invalid amount' using errcode='22023';
+      end if;
+      v_amount := (p_payload->>'amount_cents')::bigint;
+      if v_amount<v.total_budget_cents then
+        raise exception 'Insufficient approved budget' using errcode='22023';
+      end if;
+      update public.ooh_flights set budget_approval_ref=v_ref,approved_budget_cents=v_amount where id=p_flight_id;
+    when 'creative' then
+      update public.ooh_flights set creative_ref=v_ref where id=p_flight_id;
+    when 'capacity' then
+      update public.ooh_flights set capacity_ref=v_ref where id=p_flight_id;
+    when 'tracking' then
+      if (p_payload->>'url') not like 'https://%' then
+        raise exception 'HTTPS tracking URL required' using errcode='22023';
+      end if;
+      update public.ooh_flights set tracking_ref=v_ref,tracking_url=p_payload->>'url' where id=p_flight_id;
+    when 'book' then
+      if v.permission_ref is null or v.budget_approval_ref is null or v.creative_ref is null
+        or v.capacity_ref is null or v.tracking_ref is null or v.approved_budget_cents<v.total_budget_cents
+      then raise exception 'Required booking gates incomplete' using errcode='22023'; end if;
+      update public.ooh_flights set booking_ref=v_ref,status='Booked' where id=p_flight_id;
+    when 'install' then
+      if v.status<>'Booked' then raise exception 'Booking required' using errcode='22023'; end if;
+      update public.ooh_flights set install_proof_ref=v_ref,status='Live' where id=p_flight_id;
+    when 'inspect' then
+      if v.status<>'Live' then raise exception 'Live placement required' using errcode='22023'; end if;
+      update public.ooh_flights set inspection_ref=v_ref where id=p_flight_id;
+    when 'outcome' then
+      if v.status not in ('Live','Closed') then raise exception 'Live or closed flight required' using errcode='22023'; end if;
+      if (p_payload->>'responses') !~ '^[0-9]{1,9}$'
+        or (p_payload->>'qualified') !~ '^[0-9]{1,9}$'
+        or (p_payload->>'spend_cents') !~ '^[0-9]{1,15}$'
+      then raise exception 'Invalid campaign outcomes' using errcode='22023'; end if;
+      v_responses:=(p_payload->>'responses')::int;
+      v_qualified:=(p_payload->>'qualified')::int;
+      v_spend:=(p_payload->>'spend_cents')::bigint;
+      if v_qualified>v_responses then raise exception 'Qualified count exceeds responses' using errcode='22023'; end if;
+      update public.ooh_flights set response_count=v_responses,qualified_count=v_qualified,spend_cents=v_spend where id=p_flight_id;
+    when 'close' then
+      if v.status<>'Live' or v.inspection_ref is null then
+        raise exception 'Live inspection required' using errcode='22023'; end if;
+      update public.ooh_flights set removal_ref=v_ref,status='Closed' where id=p_flight_id;
+    when 'cancel' then
+      if v.status not in ('Draft','Booked') then raise exception 'Cannot cancel at this stage' using errcode='22023'; end if;
+      update public.ooh_flights set cancel_reason=v_ref,status='Cancelled' where id=p_flight_id;
+  end case;
+
+  update public.ooh_flights set version=version+1,updated_at=now() where id=p_flight_id returning * into v;
+  insert into public.ooh_flight_events(organisation_id,flight_id,actor_id,action,payload)
+  values(v.organisation_id,v.id,p_actor_id,p_action,p_payload);
+  insert into public.client_ooh_updates(flight_id,organisation_id,title,format,status,starts_on,ends_on,updated_at)
+  values(v.id,v.organisation_id,v.name,v.format,v.status,v.starts_on,v.ends_on,now())
+  on conflict(flight_id) do update set status=excluded.status,updated_at=excluded.updated_at;
+  return v;
+end;
+$body$;
+
+revoke all on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) from public,anon,authenticated;
+grant execute on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) to service_role;
+
+-- Historical evidence must not be editable by client sessions.
+-- Confirm all policies and grants in staging, and run Supabase security advisors
+-- before promoting the migration.
+
+        or coalesce(p_payload->>'spend_cents','') !~ '^[0-9]{1,15}
+      then raise exception 'Invalid campaign outcomes' using errcode='22023'; end if;
+      v_responses:=(p_payload->>'responses')::int;
+      v_qualified:=(p_payload->>'qualified')::int;
+      v_spend:=(p_payload->>'spend_cents')::bigint;
+      if v_qualified>v_responses then raise exception 'Qualified count exceeds responses' using errcode='22023'; end if;
+      update public.ooh_flights set response_count=v_responses,qualified_count=v_qualified,spend_cents=v_spend where id=p_flight_id;
+    when 'close' then
+      if v.status<>'Live' or v.inspection_ref is null then
+        raise exception 'Live inspection required' using errcode='22023'; end if;
+      update public.ooh_flights set removal_ref=v_ref,status='Closed' where id=p_flight_id;
+    when 'cancel' then
+      if v.status not in ('Draft','Booked') then raise exception 'Cannot cancel at this stage' using errcode='22023'; end if;
+      update public.ooh_flights set cancel_reason=v_ref,status='Cancelled' where id=p_flight_id;
+  end case;
+
+  update public.ooh_flights set version=version+1,updated_at=now() where id=p_flight_id returning * into v;
+  insert into public.ooh_flight_events(organisation_id,flight_id,actor_id,action,payload)
+  values(v.organisation_id,v.id,p_actor_id,p_action,p_payload);
+  insert into public.client_ooh_updates(flight_id,organisation_id,title,format,status,starts_on,ends_on,updated_at)
+  values(v.id,v.organisation_id,v.name,v.format,v.status,v.starts_on,v.ends_on,now())
+  on conflict(flight_id) do update set status=excluded.status,updated_at=excluded.updated_at;
+  return v;
+end;
+$body$;
+
+revoke all on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) from public,anon,authenticated;
+grant execute on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) to service_role;
+
+-- Historical evidence must not be editable by client sessions.
+-- Confirm all policies and grants in staging, and run Supabase security advisors
+-- before promoting the migration.
+ then
+        raise exception 'Invalid amount' using errcode='22023';
+      end if;
+      v_amount := (p_payload->>'amount_cents')::bigint;
+      if v_amount<v.total_budget_cents then
+        raise exception 'Insufficient approved budget' using errcode='22023';
+      end if;
+      update public.ooh_flights set budget_approval_ref=v_ref,approved_budget_cents=v_amount where id=p_flight_id;
+    when 'creative' then
+      update public.ooh_flights set creative_ref=v_ref where id=p_flight_id;
+    when 'capacity' then
+      update public.ooh_flights set capacity_ref=v_ref where id=p_flight_id;
+    when 'tracking' then
+      if (p_payload->>'url') not like 'https://%' then
+        raise exception 'HTTPS tracking URL required' using errcode='22023';
+      end if;
+      update public.ooh_flights set tracking_ref=v_ref,tracking_url=p_payload->>'url' where id=p_flight_id;
+    when 'book' then
+      if v.permission_ref is null or v.budget_approval_ref is null or v.creative_ref is null
+        or v.capacity_ref is null or v.tracking_ref is null or v.approved_budget_cents<v.total_budget_cents
+      then raise exception 'Required booking gates incomplete' using errcode='22023'; end if;
+      update public.ooh_flights set booking_ref=v_ref,status='Booked' where id=p_flight_id;
+    when 'install' then
+      if v.status<>'Booked' then raise exception 'Booking required' using errcode='22023'; end if;
+      update public.ooh_flights set install_proof_ref=v_ref,status='Live' where id=p_flight_id;
+    when 'inspect' then
+      if v.status<>'Live' then raise exception 'Live placement required' using errcode='22023'; end if;
+      update public.ooh_flights set inspection_ref=v_ref where id=p_flight_id;
+    when 'outcome' then
+      if v.status not in ('Live','Closed') then raise exception 'Live or closed flight required' using errcode='22023'; end if;
+      if (p_payload->>'responses') !~ '^[0-9]{1,9}$'
+        or (p_payload->>'qualified') !~ '^[0-9]{1,9}$'
+        or (p_payload->>'spend_cents') !~ '^[0-9]{1,15}$'
+      then raise exception 'Invalid campaign outcomes' using errcode='22023'; end if;
+      v_responses:=(p_payload->>'responses')::int;
+      v_qualified:=(p_payload->>'qualified')::int;
+      v_spend:=(p_payload->>'spend_cents')::bigint;
+      if v_qualified>v_responses then raise exception 'Qualified count exceeds responses' using errcode='22023'; end if;
+      update public.ooh_flights set response_count=v_responses,qualified_count=v_qualified,spend_cents=v_spend where id=p_flight_id;
+    when 'close' then
+      if v.status<>'Live' or v.inspection_ref is null then
+        raise exception 'Live inspection required' using errcode='22023'; end if;
+      update public.ooh_flights set removal_ref=v_ref,status='Closed' where id=p_flight_id;
+    when 'cancel' then
+      if v.status not in ('Draft','Booked') then raise exception 'Cannot cancel at this stage' using errcode='22023'; end if;
+      update public.ooh_flights set cancel_reason=v_ref,status='Cancelled' where id=p_flight_id;
+  end case;
+
+  update public.ooh_flights set version=version+1,updated_at=now() where id=p_flight_id returning * into v;
+  insert into public.ooh_flight_events(organisation_id,flight_id,actor_id,action,payload)
+  values(v.organisation_id,v.id,p_actor_id,p_action,p_payload);
+  insert into public.client_ooh_updates(flight_id,organisation_id,title,format,status,starts_on,ends_on,updated_at)
+  values(v.id,v.organisation_id,v.name,v.format,v.status,v.starts_on,v.ends_on,now())
+  on conflict(flight_id) do update set status=excluded.status,updated_at=excluded.updated_at;
+  return v;
+end;
+$body$;
+
+revoke all on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) from public,anon,authenticated;
+grant execute on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) to service_role;
+
+-- Historical evidence must not be editable by client sessions.
+-- Confirm all policies and grants in staging, and run Supabase security advisors
+-- before promoting the migration.
+
+      then raise exception 'Invalid campaign outcomes' using errcode='22023'; end if;
+      v_responses:=(p_payload->>'responses')::int;
+      v_qualified:=(p_payload->>'qualified')::int;
+      v_spend:=(p_payload->>'spend_cents')::bigint;
+      if v_qualified>v_responses then raise exception 'Qualified count exceeds responses' using errcode='22023'; end if;
+      update public.ooh_flights set response_count=v_responses,qualified_count=v_qualified,spend_cents=v_spend where id=p_flight_id;
+    when 'close' then
+      if v.status<>'Live' or v.inspection_ref is null then
+        raise exception 'Live inspection required' using errcode='22023'; end if;
+      update public.ooh_flights set removal_ref=v_ref,status='Closed' where id=p_flight_id;
+    when 'cancel' then
+      if v.status not in ('Draft','Booked') then raise exception 'Cannot cancel at this stage' using errcode='22023'; end if;
+      update public.ooh_flights set cancel_reason=v_ref,status='Cancelled' where id=p_flight_id;
+  end case;
+
+  update public.ooh_flights set version=version+1,updated_at=now() where id=p_flight_id returning * into v;
+  insert into public.ooh_flight_events(organisation_id,flight_id,actor_id,action,payload)
+  values(v.organisation_id,v.id,p_actor_id,p_action,p_payload);
+  insert into public.client_ooh_updates(flight_id,organisation_id,title,format,status,starts_on,ends_on,updated_at)
+  values(v.id,v.organisation_id,v.name,v.format,v.status,v.starts_on,v.ends_on,now())
+  on conflict(flight_id) do update set status=excluded.status,updated_at=excluded.updated_at;
+  return v;
+end;
+$body$;
+
+revoke all on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) from public,anon,authenticated;
+grant execute on function public.progress_ooh_flight(uuid,bigint,text,jsonb,uuid) to service_role;
+
+-- Historical evidence must not be editable by client sessions.
+-- Confirm all policies and grants in staging, and run Supabase security advisors
+-- before promoting the migration.
+ then
         raise exception 'Invalid amount' using errcode='22023';
       end if;
       v_amount := (p_payload->>'amount_cents')::bigint;
