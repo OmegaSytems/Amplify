@@ -1,18 +1,23 @@
 # Omega Amplify
 
-Initial staff, management and client portal interface.
+Responsive agency operating system UI for management, staff and client workspaces, built without Lovable credits.
 
-## Run
-Open `index.html` in a browser. This is a static demonstration with sample data.
+## Preview
+Open `index.html` in a modern browser — no installation or build step required. All accounts, campaigns, leads, messages and financials are **fictional demo records**. Interactions are saved locally in your browser.
 
 ## Included
-- Management, staff and client view switching
-- Accounts, campaigns, leads, tasks, approvals, reports and billing screens
-- Paid, organic, leads-only and leads-plus-closing service overview
-- Responsive layout
+Management: client portfolio and profiles, CRM, projects, paid ads, organic production, lead engine, closing deals, approvals, tasks, files, messages, reports, billing, team and support.
 
-## Not yet production-ready
-The role switcher is **not authentication**. Sample records are in browser memory. There is no persistent database, tenant isolation, Stripe, Supabase, real messaging or advertising integration. Never enter real customer data or publish this as a secure client portal.
+Staff: assigned client delivery workspaces, task boards, campaigns, content calendar, leads, deals, approvals, files and communication.
 
-## Contribution workflow
-Use development branches and draft PRs. Do not push to main or add GitHub Actions workflows without approval.
+Client: services, performance, content, approvals, projects, files, messages, invoices and support. Offer navigation is filtered by demo subscriptions.
+
+UI includes forms, workflow actions, responsive side navigation, dark/light themes, command search (Ctrl/Cmd+K), notifications, CSV exports, calendar, tables, kanban, charts and sample approval flows.
+
+## Important limitation
+**This is a static preview, not a production-ready portal.** The role selector is not authentication. The existing Supabase migrations are unexecuted drafts and are not connected to this UI. Real clients, payment processing, advertising accounts, storage, invitations and access security must be implemented and tested separately. Never enter real client data.
+
+## Verification
+Run `node tests/ui-smoke.mjs` (Node 20+). The test checks all primary role/page combinations using a mocked DOM. Browser-based accessibility and visual testing are still required.
+
+Keep all development in feature branches with draft pull requests. Do not push to main.

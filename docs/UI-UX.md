@@ -8,7 +8,7 @@
 - Client navigation automatically hides unsubscribed offer workspaces in the demo. Production must also enforce this at the server and database layers.
 
 ## Implemented screens
-Overview; Accounts + Account Detail; Agency CRM; Projects; Content Calendar; Paid Advertising; Organic Studio; Lead Engine; Closing Pipeline; Approvals; Task Centre; Messages; Analytics; Billing; Team; Support; Settings; My Services.
+Overview; Accounts + Account Detail; Agency CRM; Projects; Content Calendar; Paid Advertising; Organic Studio; Lead Engine; Closing Pipeline; Approvals; Task Centre; Messages; Files & Assets; Analytics; Billing; Team; Support; Settings; My Services.
 
 ## Interaction patterns
 - Sidebar navigation, responsive mobile drawer, command search (Cmd/Ctrl+K), role and client preview switchers, dark/light theme.
