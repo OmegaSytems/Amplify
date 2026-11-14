@@ -2,6 +2,7 @@
 
 ## Browser demo features — implemented
 - Nexus-style management, staff and client UI, responsive themes, dashboards, client portfolio, CRM, tasks, calendar, campaigns, content, leads, closing, billing, approvals, reports and files.
+- Separate responsive public website with four service offers, OOH introduction, operating process and a local-only enquiry brief (no submission service).
 - 23 Supply-style staff operating system workspaces, including linked work timer, timesheets, shift/weekly reviews, rosters, leave, training, goals, coaching, QA and people reporting.
 - 20 agency/omnichannel operational workspaces, 28 channel catalogue, OOH planning and evidence gates, creatives, budgets, attribution, SEO/AEO, email, publishing, supplier registers, onboarding and retention.
 - Fictional sample records are kept in local browser storage. The demo role switcher is not authentication.
@@ -24,3 +25,9 @@
 
 ## Operating rules
 In code is not equal to staged, verified, merged or deployed. Never push directly to main, add GitHub Actions workflows or publish credentials/client data in this public repository.
+
+## Most recent isolated checks
+- 137 management/staff/client/agency page renders passed in a mocked DOM.
+- Five mocked API checks passed for unauthenticated, unconfigured, outsider, client and staff read behaviour.
+- OOH domain transition and demo booking-to-close-out path passed isolated checks.
+- These are not live browser, installed Node suite or hosted Supabase integration tests.
