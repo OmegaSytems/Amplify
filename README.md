@@ -3,7 +3,7 @@
 Responsive agency operating system UI for management, staff and client workspaces, built without Lovable credits.
 
 ## Preview
-Open `index.html` in a modern browser — no installation or build step required. All accounts, campaigns, leads, messages and financials are **fictional demo records**. Interactions are saved locally in your browser.
+Use **Node.js 20+** and run `npm run preview`; open `http://127.0.0.1:8790/app` for the portal and `/` for the public site. Opening `index.html` directly from `file://` is not supported because the portal now imports a shared ES module. No package installation is required for this local preview. All accounts, campaigns, leads, messages and financials are **fictional demo records**. Interactions are saved locally in your browser.
 
 ## Included
 Management: client portfolio and profiles, CRM, projects, paid ads, organic production, lead engine, closing deals, approvals, tasks, files, messages, reports, billing, team and support.
@@ -30,3 +30,9 @@ Use Node 20+ to run npm run test:all. The isolated API scaffold uses npm run sta
 ## Run local previews
 
 Run `npm run preview` with Node 20+ to start a localhost-only preview at `http://127.0.0.1:8790` (public website) and `http://127.0.0.1:8790/app` (unauthenticated staff/client demo). This deliberately does **not** expose private SQL, environment variables or any production data. It is a preview only, never host it publicly.
+
+## Client-delivery workflows (P0 demo implementation)
+
+The new workspaces are **Scopes & launch gates**, **Onboarding inputs**, **Commercial handoffs**, **Lead batches & acceptance** and **Scope changes**. They share the domain policy in `src/domain/delivery-workflows.mjs`, use versioned demo transitions and are documented in [`docs/DELIVERY-WORKFLOWS.md`](docs/DELIVERY-WORKFLOWS.md).
+
+Only fictional browser-local records are used; signed SOWs, client approval identities, billing state and QA evidence are **simulated**, not real or independently verified. Actual production requires a dedicated Amplify Supabase project. Do not run any Amplify SQL against Omega Education.

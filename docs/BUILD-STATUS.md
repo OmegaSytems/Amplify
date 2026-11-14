@@ -37,3 +37,7 @@ In code is not equal to staged, verified, merged or deployed. Never push directl
 - Five additional staff/client workflow screens wired into the existing localhost preview. All records remain fictional in localStorage; role-switching is not authentication.
 - New review-only SQL for explicit client approver authority and immutable review/audit records. It has not been applied or tested in a dedicated database.
 - Isolated tests: seven new domain-rule checks and 17 route/interaction checks passed in an isolated V8 environment, not a live browser, Postgres or provider integration.
+
+## Reviewed local-preview test status
+- 29 isolated JavaScript assertions on the latest domain policy, delivery views and interaction paths passed. These do not replace actual Node execution or browser visual tests.
+- Existing ui-smoke and agency-smoke scripts were adapted for the new policy module; Node scripts are committed but not executed in this connector environment.
