@@ -17,7 +17,10 @@ const files=new Map([
  ["/src/agency/agency-os.css",["src/agency/agency-os.css","text/css; charset=utf-8"]],
  ["/src/delivery/delivery-os.js",["src/delivery/delivery-os.js","text/javascript; charset=utf-8"]],
  ["/src/delivery/delivery-os.css",["src/delivery/delivery-os.css","text/css; charset=utf-8"]],
- ["/src/domain/delivery-workflows.mjs",["src/domain/delivery-workflows.mjs","text/javascript; charset=utf-8"]]
+ ["/src/domain/delivery-workflows.mjs",["src/domain/delivery-workflows.mjs","text/javascript; charset=utf-8"]],
+ ["/src/domain/staff-operations.mjs",["src/domain/staff-operations.mjs","text/javascript; charset=utf-8"]],
+ ["/src/operations/operations-os.js",["src/operations/operations-os.js","text/javascript; charset=utf-8"]],
+ ["/src/operations/operations-os.css",["src/operations/operations-os.css","text/css; charset=utf-8"]]
 ]);
 /**
  * Local-only browser preview. Never publish this server publicly:

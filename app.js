@@ -1,5 +1,7 @@
+import * as staffPolicy from './src/domain/staff-operations.mjs';
 import * as deliveryPolicy from './src/domain/delivery-workflows.mjs';
 window.AmplifyDelivery?.configure(deliveryPolicy);
+window.AmplifyOperations?.configure(staffPolicy);
 
 /* Omega Amplify — full UI/UX demonstration. Not a security boundary or live client portal. */
 const $ = (s, r = document) => r.querySelector(s);
@@ -179,6 +181,8 @@ if(clientItems.length)sections.client.push(['ADDITIONAL SERVICES',clientItems]);
 const deliveryCatalog=window.AmplifyDelivery?.catalog||[];
 for(const role of ['management','staff'])sections[role].push(['CLIENT DELIVERY',deliveryCatalog.map(([key,label,ico])=>[key,label,ico])]);
 sections.client.push(['SERVICE DELIVERY',deliveryCatalog.filter(x=>x[0]!=='delivery-handoffs').map(([key,label,ico])=>[key,label,ico])]);
+const operationsCatalog=window.AmplifyOperations?.catalog||[];
+for(const role of ['management','staff'])sections[role].push(['AMPLIFY INTERNAL OPERATIONS',operationsCatalog.map(([key,label,ico])=>[key,label,ico])]);
 const navItems=()=>sections[state.role].map(([heading,items])=>[heading,items.filter(([key])=>!({paid:'paid',organic:'organic',leads:'leads',closing:'closing'}[key])||subscribed(key))]).filter(([,items])=>items.length);
 const pageTitle = () => (navItems().flatMap(x=>x[1]).find(x=>x[0]===state.page)||['','Workspace'])[1];
 const pill=(s)=>{const v=String(s||'');const cls=/^(active|approved|paid|won|done|published|scheduled|qualified)$/i.test(v)?'green':/^(pending|review|awaiting|onboarding|proposal|draft|in progress|submitted|medium)$/i.test(v)?'yellow':/^(overdue|lost|cancelled|high|changes requested)$/i.test(v)?'red':'purple';return '<span class="pill '+cls+'">'+esc(v)+'</span>';};
@@ -336,6 +340,7 @@ const deliveryEnvironment=()=>({state,data,esc,icon,pill,button,topHeader,panel,
 for(const [key] of window.AmplifyStaff?.catalog||[])renderers[key]=()=>window.AmplifyStaff.render(key,staffEnvironment());
 for(const [key] of window.AmplifyAgency?.catalog||[])renderers[key]=()=>window.AmplifyAgency.render(key,agencyEnvironment());
 for(const [key] of window.AmplifyDelivery?.catalog||[])renderers[key]=()=>window.AmplifyDelivery.render(key,deliveryEnvironment());
+for(const [key] of window.AmplifyOperations?.catalog||[])renderers[key]=()=>window.AmplifyOperations.render(key,deliveryEnvironment());
 function render(){
  const currentPage=state.page==='client-detail'?'Client profile':pageTitle();
  const sidebar='<aside class="sidebar '+(state.sidebar?'open':'')+'" id="sidebar" aria-label="Workspace navigation"><div class="brand"><span class="brand-symbol">Ω</span><div><div class="brand-title">Amplify</div><div class="brand-sub">OMEGA SYSTEMS</div></div></div>'+navItems().map(([heading,items])=>'<div class="menu-block"><div class="menu-label">'+esc(heading)+'</div>'+items.map(([k,label,ico])=>'<button class="side-link '+(state.page===k?'active':'')+'" data-action="nav" data-id="'+k+'" '+(state.page===k?'aria-current="page"':'')+'>'+icon(ico,17)+' '+esc(label)+'</button>').join('')+'</div>').join('')+'<div class="sidebar-bottom"><div class="side-profile"><div class="avatar">Ω</div><div class="profile-meta"><b>Amplify workspace</b><small>'+esc(roleLabel())+' · Demo</small></div></div></div></aside>';
@@ -449,6 +454,9 @@ document.addEventListener('input',e=>{
  if(e.target.id==='command-input'){state.commandQuery=e.target.value;renderCommand();$('#command-input')?.setSelectionRange(state.commandQuery.length,state.commandQuery.length);}
 });
 document.addEventListener('submit',e=>{
+ if(e.target.matches?.('form[data-ops-form]')){
+  e.preventDefault();window.AmplifyOperations?.submit(e.target.dataset.opsForm,Object.fromEntries(new FormData(e.target).entries()),deliveryEnvironment());return;
+ }
  if(e.target.matches?.('form[data-delivery-form]')){
   e.preventDefault();window.AmplifyDelivery?.submit(e.target.dataset.deliveryForm,Object.fromEntries(new FormData(e.target).entries()),deliveryEnvironment());return;
  }

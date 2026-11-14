@@ -6,10 +6,12 @@ const doc={body:{classList:{toggle(){}},appendChild(){}},querySelector(s){return
 const localStorage={getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)};
 const win={scrollTo(){},localStorage};
 const ctx=vm.createContext({document:doc,window:win,localStorage,console,Date,Math,Intl,Number,JSON,Array,Object,String,Set,RegExp,URL,Blob,FormData,confirm:()=>false,setTimeout:()=>{}});
-for(const path of ['../src/staff/staff-os.js','../src/agency/agency-os.js','../src/delivery/delivery-os.js'])vm.runInContext(fs.readFileSync(new URL(path,import.meta.url),'utf8'),ctx,{filename:path});
+for(const path of ['../src/staff/staff-os.js','../src/agency/agency-os.js','../src/delivery/delivery-os.js','../src/operations/operations-os.js'])vm.runInContext(fs.readFileSync(new URL(path,import.meta.url),'utf8'),ctx,{filename:path});
 const d=fs.readFileSync(new URL('../src/domain/delivery-workflows.mjs',import.meta.url),'utf8');
 vm.runInContext(d.replace(/^export /gm,'')+'\n;globalThis.deliveryPolicy={normaliseOffer,requiredGates,evaluateLaunch,transitionWorkstream,submitClientInput,checkBatch,reviewLead,ONBOARDING_INPUTS}',ctx,{filename:'delivery-workflows.mjs'});
-const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/^import \* as deliveryPolicy from .*;\n/,'');
+const staffPolicy=fs.readFileSync(new URL('../src/domain/staff-operations.mjs',import.meta.url),'utf8');
+vm.runInContext(staffPolicy.replace(/^export /gm,'')+'\n;globalThis.staffPolicy={STAGES,ALLOWED,SEVERITIES,APPROVALS,advanceDeal,assessOutreach,reviewQuality,calculateMargin,commissionEligible,capacity,clientHealth}',ctx,{filename:'staff-operations.mjs'});
+const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8').replace(/^import .*$/gm,'');
 vm.runInContext(app,ctx,{filename:'app.js'});
 let n=0;
 for(const role of ['management','staff','client']){
