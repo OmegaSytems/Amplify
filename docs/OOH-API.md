@@ -20,3 +20,5 @@ Endpoints:
 Token verification calls the Supabase Auth `/auth/v1/user` endpoint. The server derives the authenticated user ID from that response and does not trust a role or actor ID supplied in the request body.
 
 **Not deployed.** Requires the separately reviewed OOH draft schema, a dedicated Amplify database, staging tests, operating controls, secrets management, rate limiting, monitoring and security review before use. Do not expose server keys, and do not deploy this foundation as a public production server until verification is complete.
+
+The development API currently binds to localhost only. Any future public deployment must use a reviewed reverse proxy, HTTPS, request rate limiting and production monitoring; changing the listener address alone is not a release process.

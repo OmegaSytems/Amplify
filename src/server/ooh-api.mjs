@@ -133,5 +133,5 @@ export function createHandler({env=process.env,fetcher=fetch}={}){
 export function startServer({env=process.env,fetcher=fetch}={}){
  const port=Number(env.PORT||8788);
  const server=createServer(createHandler({env,fetcher}));
- return server.listen(port);
+ return server.listen(port, "127.0.0.1");
 }
