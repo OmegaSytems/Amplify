@@ -1,3 +1,5 @@
+import * as deliveryPolicy from './src/domain/delivery-workflows.mjs';
+window.AmplifyDelivery?.configure(deliveryPolicy);
 
 /* Omega Amplify — full UI/UX demonstration. Not a security boundary or live client portal. */
 const $ = (s, r = document) => r.querySelector(s);
@@ -174,6 +176,9 @@ for(const role of ['management','staff']){
 const clientExtra=['agency-channels','agency-ooh','agency-creatives','agency-tracking','agency-email','agency-search'];
 const clientItems=(window.AmplifyAgency?.catalog||[]).filter(x=>clientExtra.includes(x[0])).map(([key,label,ico])=>[key,label,ico]);
 if(clientItems.length)sections.client.push(['ADDITIONAL SERVICES',clientItems]);
+const deliveryCatalog=window.AmplifyDelivery?.catalog||[];
+for(const role of ['management','staff'])sections[role].push(['CLIENT DELIVERY',deliveryCatalog.map(([key,label,ico])=>[key,label,ico])]);
+sections.client.push(['SERVICE DELIVERY',deliveryCatalog.filter(x=>x[0]!=='delivery-handoffs').map(([key,label,ico])=>[key,label,ico])]);
 const navItems=()=>sections[state.role].map(([heading,items])=>[heading,items.filter(([key])=>!({paid:'paid',organic:'organic',leads:'leads',closing:'closing'}[key])||subscribed(key))]).filter(([,items])=>items.length);
 const pageTitle = () => (navItems().flatMap(x=>x[1]).find(x=>x[0]===state.page)||['','Workspace'])[1];
 const pill=(s)=>{const v=String(s||'');const cls=/^(active|approved|paid|won|done|published|scheduled|qualified)$/i.test(v)?'green':/^(pending|review|awaiting|onboarding|proposal|draft|in progress|submitted|medium)$/i.test(v)?'yellow':/^(overdue|lost|cancelled|high|changes requested)$/i.test(v)?'red':'purple';return '<span class="pill '+cls+'">'+esc(v)+'</span>';};
@@ -327,8 +332,10 @@ function settingsPage(){
 const renderers={overview,services:servicesPage,clients:clientsPage,crm:agencyCRM,projects:projectsPage,calendar:calendarPage,paid:campaignsPage,organic:organicPage,leads:leadsPage,closing:closingPage,approvals:approvalsPage,tasks:tasksPage,assets:assetsPage,messages:messagesPage,reports:reportsPage,billing:billingPage,team:teamPage,support:supportPage,settings:settingsPage};
 const staffEnvironment=()=>({state,data,esc,icon,pill,button,topHeader,panel,valueCard,tabular,td,date,money,accountName,render,goto,notify});
 const agencyEnvironment=()=>({state,data,esc,icon,pill,button,topHeader,panel,valueCard,tabular,td,date,money,accountName,render,goto,notify});
+const deliveryEnvironment=()=>({state,data,esc,icon,pill,button,topHeader,panel,valueCard,tabular,td,date,money,accountName,render,goto,notify});
 for(const [key] of window.AmplifyStaff?.catalog||[])renderers[key]=()=>window.AmplifyStaff.render(key,staffEnvironment());
 for(const [key] of window.AmplifyAgency?.catalog||[])renderers[key]=()=>window.AmplifyAgency.render(key,agencyEnvironment());
+for(const [key] of window.AmplifyDelivery?.catalog||[])renderers[key]=()=>window.AmplifyDelivery.render(key,deliveryEnvironment());
 function render(){
  const currentPage=state.page==='client-detail'?'Client profile':pageTitle();
  const sidebar='<aside class="sidebar '+(state.sidebar?'open':'')+'" id="sidebar" aria-label="Workspace navigation"><div class="brand"><span class="brand-symbol">Ω</span><div><div class="brand-title">Amplify</div><div class="brand-sub">OMEGA SYSTEMS</div></div></div>'+navItems().map(([heading,items])=>'<div class="menu-block"><div class="menu-label">'+esc(heading)+'</div>'+items.map(([k,label,ico])=>'<button class="side-link '+(state.page===k?'active':'')+'" data-action="nav" data-id="'+k+'" '+(state.page===k?'aria-current="page"':'')+'>'+icon(ico,17)+' '+esc(label)+'</button>').join('')+'</div>').join('')+'<div class="sidebar-bottom"><div class="side-profile"><div class="avatar">Ω</div><div class="profile-meta"><b>Amplify workspace</b><small>'+esc(roleLabel())+' · Demo</small></div></div></div></aside>';
@@ -406,6 +413,7 @@ document.addEventListener('click',e=>{
   if(e.target?.dataset?.backdrop){state.modal='';state.command=false;render();}return;
  }
  const action=el.dataset.action, value=el.dataset.id;
+ if(action.startsWith('delivery-')&&window.AmplifyDelivery?.click(action,value,deliveryEnvironment()))return;
  if(action.startsWith('staff-')&&window.AmplifyStaff?.click(action,value,staffEnvironment()))return;
  if(action.startsWith('agency-')&&window.AmplifyAgency?.action(action,value,agencyEnvironment()))return;
  if(action==='nav'){goto(value);return;}
@@ -441,6 +449,9 @@ document.addEventListener('input',e=>{
  if(e.target.id==='command-input'){state.commandQuery=e.target.value;renderCommand();$('#command-input')?.setSelectionRange(state.commandQuery.length,state.commandQuery.length);}
 });
 document.addEventListener('submit',e=>{
+ if(e.target.matches?.('form[data-delivery-form]')){
+  e.preventDefault();window.AmplifyDelivery?.submit(e.target.dataset.deliveryForm,Object.fromEntries(new FormData(e.target).entries()),deliveryEnvironment());return;
+ }
  if(e.target.id==='staff-form'){
   e.preventDefault();
   window.AmplifyStaff?.submit(e.target.dataset.staffForm,Object.fromEntries(new FormData(e.target).entries()),staffEnvironment());
