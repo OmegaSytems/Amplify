@@ -40,3 +40,6 @@ Only fictional browser-local records are used; signed SOWs, client approval iden
 ## Amplify-only staff operations
 
 Seven new staff-only workspaces cover CRM, governed outreach, independent QA, finance, capacity, account health and executive exceptions. See [`docs/AMPLIFY-STAFF-OPERATIONS.md`](docs/AMPLIFY-STAFF-OPERATIONS.md). These are fictional demo workflows, not live backend services.
+
+## Nexus Prime operator connection (P0 draft)
+Customer identity, authentication, marketing permissions and canonical campaign records belong to **Omega Systems**, with Nexus Prime as an integrated customer module of that same platform. The staff-side client in src/integrations/prime-operator.mjs connects to **Omega Systems Auth and its Supabase backend** using a signed-in user's Systems token; see docs/PRIME_OPERATOR_HANDOFF.md. It is not yet wired to live staff SSO, the actual Systems database or external marketing providers. The historical Amplify client UI remains an unauthenticated local-only demo and must not be deployed as a customer portal.
