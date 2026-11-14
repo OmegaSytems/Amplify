@@ -36,3 +36,11 @@ Run `npm run preview` with Node 20+ to start a localhost-only preview at `http:/
 The new workspaces are **Scopes & launch gates**, **Onboarding inputs**, **Commercial handoffs**, **Lead batches & acceptance** and **Scope changes**. They share the domain policy in `src/domain/delivery-workflows.mjs`, use versioned demo transitions and are documented in [`docs/DELIVERY-WORKFLOWS.md`](docs/DELIVERY-WORKFLOWS.md).
 
 Only fictional browser-local records are used; signed SOWs, client approval identities, billing state and QA evidence are **simulated**, not real or independently verified. Actual production requires a dedicated Amplify Supabase project. Do not run any Amplify SQL against Omega Education.
+
+## Amplify-only staff operations
+
+Seven new staff-only workspaces cover CRM, governed outreach, independent QA, finance, capacity, account health and executive exceptions. See [`docs/AMPLIFY-STAFF-OPERATIONS.md`](docs/AMPLIFY-STAFF-OPERATIONS.md). These are fictional demo workflows, not live backend services.
+
+
+## Nexus Prime operator connection (P0 draft)
+Customer identity, marketing permissions and shared campaigns belong to Nexus Prime in Omega Systems. The new staff-side API client is in src/integrations/prime-operator.mjs with tests and the handoff plan in docs/PRIME_OPERATOR_HANDOFF.md. It is not yet wired to live staff SSO, a Prime database or external marketing providers. The historical Amplify client UI remains an unauthenticated local-only demo and must not be deployed as a customer portal.
