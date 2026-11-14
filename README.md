@@ -21,3 +21,8 @@ UI includes forms, workflow actions, responsive side navigation, dark/light them
 Run `node tests/ui-smoke.mjs` (Node 20+). The test checks all primary role/page combinations using a mocked DOM. Browser-based accessibility and visual testing are still required.
 
 Keep all development in feature branches with draft pull requests. Do not push to main.
+
+## Omnichannel and backend foundation
+
+Additional screens include OOH, digital and traditional media, creative review, attribution, suppliers, proposals, publishing and client success. See docs/OMNICHANNEL-OOH.md and docs/BUILD-STATUS.md.
+Use Node 20+ to run npm run test:all. The isolated API scaffold uses npm run start:api, but is not ready for deployment without the separately reviewed Amplify database and production hardening. Browser preview is not connected to that API.
