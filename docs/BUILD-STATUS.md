@@ -31,3 +31,9 @@ In code is not equal to staged, verified, merged or deployed. Never push directl
 - Five mocked API checks passed for unauthenticated, unconfigured, outsider, client and staff read behaviour.
 - OOH domain transition and demo booking-to-close-out path passed isolated checks.
 - These are not live browser, installed Node suite or hosted Supabase integration tests.
+
+## 14 November — P0 delivery increment
+- Shared workstream domain policy with 3 offer families, Lead Engine modes, documented launch-gate blockers, versioned manager transitions, client-input submission/staff verification, QA/delivery and client lead acceptance.
+- Five additional staff/client workflow screens wired into the existing localhost preview. All records remain fictional in localStorage; role-switching is not authentication.
+- New review-only SQL for explicit client approver authority and immutable review/audit records. It has not been applied or tested in a dedicated database.
+- Isolated tests: seven new domain-rule checks and 17 route/interaction checks passed in an isolated V8 environment, not a live browser, Postgres or provider integration.

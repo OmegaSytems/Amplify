@@ -26,9 +26,14 @@ export function createPortalApi(supabase) {
     tasks: org => list('tasks', org),
     messages: org => list('messages', org),
     invoices: org => list('invoices', org),
-    async reviewDeliverable(id, decision) {
+    async reviewDeliverable(id, decision, note = '') {
       if (!['approved','changes_requested'].includes(decision)) throw new Error('Invalid review decision');
-      const { data, error } = await supabase.rpc('review_deliverable', { p_deliverable_id: id, p_decision: decision });
+      if (decision === 'changes_requested' && !String(note).trim()) throw new Error('Revision feedback required');
+      const { data, error } = await supabase.rpc('review_deliverable', {
+        p_deliverable_id: id,
+        p_decision: decision,
+        p_note: String(note).slice(0,1000)
+      });
       if (error) throw error;
       return data;
     },
