@@ -131,14 +131,14 @@ function render(page,h){
   return toolbar("Advertising channel hub","A single service catalogue for digital, physical, owned and partner media.",null)
     +'<div class="metric-grid">'+stat("Channels",channels.length,"Planning catalogue","layers")+stat("Physical media",channels.filter(x=>x[3]==="OOH").length,"OOH / place-based","target")+stat("Digital",channels.filter(x=>x[3]==="Digital").length,"Platform-dependent","megaphone")+stat("Connected APIs","0","No live providers","alert")+'</div>'
     +'<div class="agency-chiprow">'+types.map(x=>action(x,"agency-filter",x,s.filter===x?"primary":"small ghost")).join("")+action("All","agency-filter","All",s.filter==="All"?"primary":"small ghost")+'</div>'
-    +'<div class="agency-grid">'+channels.filter(x=>s.filter==="All"||x[3]===s.filter).map(x=>'<div class="panel panel-pad"><span class="pill">'+e(x[3])+'</span><h3 class="agency-card-title">'+e(x[0])+'</h3><p class="small muted">'+e(x[2])+'</p><div class="spread">'+action("Create plan","agency-form","new-plan")+'<span class="tiny muted">API not connected</span></div></div>').join("")+'</div>'+form;
+    +'<div class="agency-grid">'+channels.filter(x=>s.filter==="All"||x[3]===s.filter).map(x=>'<div class="panel panel-pad"><span class="pill">'+e(x[3])+'</span><h3 class="agency-card-title">'+e(x[0])+'</h3><p class="small muted">'+e(x[2])+'</p><div class="spread">'+(state.role==="client"?"":action("Create plan","agency-form","new-plan"))+'<span class="tiny muted">API not connected</span></div></div>').join("")+'</div>'+form;
  }
  if(page==="agency-ooh"){
   const ready=ooh.filter(x=>x.status==="Live").length,spend=ooh.reduce((n,x)=>n+Number(x.spend||0),0),qual=ooh.reduce((n,x)=>n+Number(x.qualified||0),0);
   return toolbar("Out-of-home campaigns","Plan place-based media from brief to verified installation, monitoring and close-out.","new-ooh",action("Placement register","nav","agency-placements"))
   +'<div class="agency-notice">Demonstration: all sites and media owners are fictional. Booking, permission, proof and spend require verified external records before real campaigns can run.</div>'
   +'<div class="metric-grid">'+stat("Placement plans",ooh.length,"OOH in this scope","target")+stat("Live placements",ready,"Documented demo status","megaphone")+stat("Recorded spend",money(spend),"Example costs","wallet")+stat("Qualified outcomes",qual,"Unverified demo attribution","chart")+'</div>'
-  +'<div class="agency-grid">'+ooh.map(x=>'<section class="panel panel-pad"><div class="spread">'+pill(x.format)+pill(x.status)+'</div><h3 class="agency-card-title">'+e(x.name)+'</h3><p class="small muted">'+client(x.account)+' · '+e(x.location)+'</p><div class="agency-checks">'+check(!!x.permissionRef,"Site permission")+check(x.approvedBudget>=x.totalBudget&&x.totalBudget>0,"Budget")+check(x.creativeApproved&&!!x.creativeRef,"Creative")+check(x.capacityConfirmed,"Operations")+check(x.trackingTested,"Tracking")+'</div><div class="agency-dl"><span>Dates</span><b>'+e(x.start)+' — '+e(x.end)+'</b><span>Budget</span><b>'+money(x.totalBudget)+'</b><span>Supplier</span><b>'+e(x.supplier)+'</b><span>Responses</span><b>'+e(x.responseCount)+'</b></div><div class="agency-actions">'+action("Manage flight","agency-select-ooh",x.id,"primary")+'</div></section>').join("")+'</div>'
+  +'<div class="agency-grid">'+ooh.map(x=>'<section class="panel panel-pad"><div class="spread">'+pill(x.format)+pill(x.status)+'</div><h3 class="agency-card-title">'+e(x.name)+'</h3><p class="small muted">'+client(x.account)+' · '+e(x.location)+'</p>'+(state.role==="client"?"":'<div class="agency-checks">'+check(!!x.permissionRef,"Site permission")+check(x.approvedBudget>=x.totalBudget&&x.totalBudget>0,"Budget")+check(x.creativeApproved&&!!x.creativeRef,"Creative")+check(x.capacityConfirmed,"Operations")+check(x.trackingTested,"Tracking")+'</div>')+'<div class="agency-dl"><span>Dates</span><b>'+e(x.start)+' — '+e(x.end)+'</b>'+(state.role==="client"?"":'<span>Budget</span><b>'+money(x.totalBudget)+'</b><span>Supplier</span><b>'+e(x.supplier)+'</b>')+'<span>Responses</span><b>'+e(x.responseCount)+'</b></div><div class="agency-actions">'+action(state.role==="client"?"View flight":"Manage flight","agency-select-ooh",x.id,"primary")+'</div></section>').join("")+'</div>'
   +(s.selected?oohDetail(s.selected,h):"")+form;
  }
  if(page==="agency-placements"){
@@ -227,14 +227,30 @@ function render(page,h){
 function oohDetail(id,h){
  const x=s.ooh.find(v=>v.id===id);if(!x)return "";
  if(h.state.role==="client"&&x.account!==h.state.account)return "";
- const e=h.esc,b=h.button,p=h.pill;const canBook=!!(x.permissionRef&&x.creativeApproved&&x.creativeRef&&x.capacityConfirmed&&x.trackingTested&&x.approvedBudget>=x.totalBudget&&x.totalBudget>0);
+ const e=h.esc,b=h.button,client=h.state.role==="client";
+ const canBook=!!(x.permissionRef&&x.creativeApproved&&x.creativeRef&&x.capacityConfirmed&&x.trackingTested&&x.approvedBudget>=x.totalBudget&&x.totalBudget>0);
  const ctl=(label,action)=>b(label,action,x.id,"small ghost");
- return '<section class="panel panel-pad agency-detail"><div class="spread"><div><h2>'+e(x.name)+'</h2><p class="small muted">'+e(x.location)+' · '+e(x.format)+' · '+e(x.status)+'</p></div>'+ctl("Close details","agency-close-detail")+'</div><div class="agency-notice">One primary CTA. Written permission, final approved artwork, verified tracking, approved spend and operational capacity are required before booking. Never treat this demo as a real booking.</div><div class="agency-checks">'+[
-  ["Site permission",!!x.permissionRef],["Budget approval",x.approvedBudget>=x.totalBudget&&x.totalBudget>0],["Creative file and approval",!!x.creativeRef&&x.creativeApproved],["Service capacity",x.capacityConfirmed],["Tracking tested",x.trackingTested],["Supplier booking",!!x.bookingRef],["Installation evidence",!!x.proofRef],["Live check",!!x.lastCheck],["Removal evidence",!!x.removalRef]
- ].map(([label,v])=>'<span class="pill '+(v?"green":"yellow")+'">'+e(label)+" · "+(v?"Yes":"No")+"</span>").join("")+'</div><p class="small muted">Audience: '+e(x.target)+' · Outcome: '+e(x.objective)+' · CTA: '+e(x.cta)+' · Tracking: '+e(x.tracking)+'</p><div class="agency-actions">'
- + (h.state.role==="client"?"":[
- ctl("Record site permission","agency-permission"),ctl("Approve budget","agency-budget"),ctl("Creative approved","agency-creative"),ctl("Confirm capacity","agency-capacity"),ctl("Tracking check","agency-test-link"),ctl("Book placement","agency-book"),ctl("Record installation","agency-proof"),ctl("Live inspection","agency-inspect"),ctl("Record outcome","agency-outcome"),ctl("Close flight","agency-close-flight")
- ].join(""))+'</div><div class="small muted" style="margin-top:16px">Booking readiness: '+(canBook?"Ready for a recorded demo booking":"Missing required gates")+'. Installed proof: '+e(x.proofRef||"Not recorded")+'. Latest check: '+e(x.lastCheck||"Not recorded")+'.</div></section>';
+ const checklist=[
+  ["Site permission",!!x.permissionRef],["Budget approval",x.approvedBudget>=x.totalBudget&&x.totalBudget>0],
+  ["Creative and approval",!!x.creativeRef&&x.creativeApproved],["Service capacity",x.capacityConfirmed],
+  ["Tracking check",x.trackingTested],["Supplier booking",!!x.bookingRef],
+  ["Installation evidence",!!x.proofRef],["Live check",!!x.lastCheck],["Removal",!!x.removalRef]
+ ];
+ const statusLabel=label=>'<span class="pill '+(label[1]?"green":"yellow")+'">'+e(label[0])+" · "+(label[1]?"Yes":"No")+"</span>";
+ const actions=client?"":[
+  ctl("Record site permission","agency-permission"),ctl("Approve budget","agency-budget"),
+  ctl("Creative approved","agency-creative"),ctl("Confirm capacity","agency-capacity"),
+  ctl("Tracking check","agency-test-link"),ctl("Book placement","agency-book"),
+  ctl("Record installation","agency-proof"),ctl("Live inspection","agency-inspect"),
+  ctl("Record outcome","agency-outcome"),ctl("Close flight","agency-close-flight")
+ ].join("");
+ return '<section class="panel panel-pad agency-detail"><div class="spread"><div><h2>'+e(x.name)+'</h2><p class="small muted">'+e(x.location)+' · '+e(x.format)+' · '+e(x.status)+'</p></div>'+ctl("Close details","agency-close-detail")+'</div>'
+ +'<div class="agency-notice">Physical media requires written permissions, approved creative and spend, appropriate service capacity, verified tracking and installation evidence. Demo references are not proof of real approval.</div>'
+ +(client?"":'<div class="agency-checks">'+checklist.map(statusLabel).join("")+'</div>')
+ +'<p class="small muted">Audience: '+e(x.target)+' · Objective: '+e(x.objective)+' · CTA: '+e(x.cta)+(client?"":" · Tracking: "+e(x.tracking))+'</p>'
+ +'<div class="agency-actions">'+actions+'</div>'
+ +(client?"":'<div class="small muted" style="margin-top:16px">Booking readiness: '+(canBook?"Ready for a recorded demo booking":"Missing required gates")+'. Installation reference: '+e(x.proofRef||"Not recorded")+'. Last check: '+e(x.lastCheck||"Not recorded")+'.</div>')
+ +'</section>';
 }
 const forms={
  "new-ooh":[["name","Campaign title","text"],["account","Client","account"],["format","Format","select:Billboard|DOOH|Transit|Poster|Venue & Retail Media|Event & Sponsorship|Cinema|Street furniture|Print"],["location","Location / site","text"],["supplier","Media supplier","text"],["target","Audience","text"],["objective","Conversion objective","text"],["cta","Single CTA","text"],["tracking","Trackable URL","url"],["start","Start date","date"],["end","End date","date"],["totalBudget","Total all-in budget (AUD)","number"]],
