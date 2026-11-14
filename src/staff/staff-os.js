@@ -49,6 +49,7 @@
     workEntries:[],
     shifts:[{id:"sh1",person:"Avery",day:later(-1),hours:2.5,taskIds:["t3"],status:"Submitted",summary:"Drafted and reviewed social captions; remaining creative QA tomorrow.",remaining:"Schedule approved version",blockers:"Awaiting client review",questions:"Should we prioritise Reels this week?",selfRating:4,managerRating:"",reviewNote:""}],
     timer:null,
+    weeklySummaries:[],
     selectedTask:"t3",
     kpis:[{id:"k1",person:"Avery",metric:"Content delivered on schedule",target:95,actual:91,unit:"%",evidence:"6 of 7 posts ready",status:"Needs review"},{id:"k2",person:"Taylor",metric:"Campaign QA completion",target:100,actual:98,unit:"%",evidence:"Tracking checks completed",status:"On track"},{id:"k3",person:"Morgan",metric:"Lead validation quality",target:98,actual:96,unit:"%",evidence:"Sampling log",status:"On track"},{id:"k4",person:"Oliver",metric:"Account update timeliness",target:95,actual:93,unit:"%",evidence:"Weekly review",status:"On track"}],
     goals:[{id:"g1",person:"Avery",title:"Lead the editorial review process",milestone:"Run two content audits independently",privacy:"Shared with manager",progress:60,status:"In progress"}],
@@ -69,7 +70,7 @@
     audit:[{id:"au1",event:"Staff demo workspace loaded",actor:"System",at:nowDay()}],
     form:"",formTarget:"",selectedChannel:"General"
   });
-  let s;try{s=JSON.parse(localStorage.getItem(KEY)||"null")||seed();if(!s.people||!s.workEntries)s=seed();}catch{s=seed();}
+  let s;try{s=JSON.parse(localStorage.getItem(KEY)||"null")||seed();if(!s.people||!s.workEntries)s=seed();if(!Array.isArray(s.weeklySummaries))s.weeklySummaries=[];}catch{s=seed();}
   const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(s));}catch{}};
   const actor=role=>role==="management"?"Oliver":"Avery";
   const onlyManagers=role=>role==="management";
@@ -91,7 +92,7 @@
     const people=s.people;
     const clock=s.timer;
     const taskById=id=>pageData.tasks.find(x=>x.id===id);
-    const taskPicker='<select id="staff-task-select" class="field-select" aria-label="Task Centre task" style="width:100%;max-width:none">'+pageData.tasks.filter(x=>x.status!=="Done").map(x=>'<option value="'+e(x.id)+'" '+(x.id===s.selectedTask?'selected':'')+'>'+e(x.title)+' · '+e(h.accountName(x.account))+'</option>').join("")+'</select>';
+    const taskPicker='<select id="staff-task-select" class="field-select" aria-label="Task Centre task" style="width:100%;max-width:none">'+pageData.tasks.filter(x=>x.status!=="Done"&&(manager||x.assignee===me)).map(x=>'<option value="'+e(x.id)+'" '+(x.id===s.selectedTask?'selected':'')+'>'+e(x.title)+' · '+e(h.accountName(x.account))+'</option>').join("")+'</select>';
     const formAction=(name,label)=>actionButton(label,"staff-form",name,"primary");
     const section= (id,title,description,content)=>header(title,description)+content;
     if(page==="staff-hub"){
@@ -123,16 +124,16 @@
     }
     if(page==="timesheets"){
       const records=s.shifts.filter(x=>manager||x.person===me);
-      return header("Timesheets & shift summaries","Task-linked hours, self-evaluations and manager approval.",formAction("shift","Add manual shift"))
+      return header("Timesheets & shift summaries","Task-linked hours, self-evaluations and manager approval.",formAction("shift","Add manual shift")+formAction("weekly","Weekly reflection"))
        +formBox("shift",h)
        +'<div class="metric-grid">'+metric("Shift entries",records.length,"In demo timesheets","file")+metric("Hours logged",records.reduce((n,x)=>n+Number(x.hours||0),0).toFixed(1),"Task-linked when selected","clock")+metric("Awaiting summary",records.filter(x=>x.status==="Needs summary").length,"Staff action required","alert")+metric("Pending review",records.filter(x=>x.status==="Submitted").length,"Manager action","checkcircle")+'</div>'
        +'<section class="panel"><div class="table-scroll"><table class="data-table"><thead><tr><th>STAFF / DATE</th><th>HOURS</th><th>TASK LINKS</th><th>SELF-REVIEW</th><th>STATUS</th><th>MANAGER</th><th></th></tr></thead><tbody>'
-       +records.map(x=>'<tr><td><b>'+e(x.person)+'</b><div class="tiny muted">'+shortDate(x.day)+'</div></td><td>'+Number(x.hours||0).toFixed(2)+'</td><td>'+x.taskIds.map(k=>'<div class="tiny">'+e(taskById(k)?.title||"Archived task")+'</div>').join("")+'</td><td><div class="small">'+e(x.summary||"Summary required")+'</div><div class="tiny muted">Self-rating: '+e(x.selfRating||"—")+'/5 · Blockers: '+e(x.blockers||"None")+'</div></td><td>'+status(x.status)+'</td><td class="small">'+e(x.managerRating||"—")+'</td><td>'+actionButton("Review","staff-review-shift",x.id)+'</td></tr>').join("")
-       +'</tbody></table></div></section>'+formBox("shift-review",h);
+       +records.map(x=>'<tr><td><b>'+e(x.person)+'</b><div class="tiny muted">'+shortDate(x.day)+'</div></td><td>'+Number(x.hours||0).toFixed(2)+'</td><td>'+x.taskIds.map(k=>'<div class="tiny">'+e(taskById(k)?.title||"Archived task")+'</div>').join("")+'</td><td><div class="small">'+e(x.summary||"Summary required")+'</div><div class="tiny muted">Self-rating: '+e(x.selfRating||"—")+'/5 · Blockers: '+e(x.blockers||"None")+'</div></td><td>'+status(x.status)+'</td><td class="small">'+e(x.managerRating||"—")+'</td><td>'+(x.status==="Needs summary"&&x.person===me?actionButton("Complete summary","staff-complete-shift",x.id):manager&&x.status==="Submitted"?actionButton("Manager review","staff-review-shift",x.id):"—")+'</td></tr>').join("")
+       +'</tbody></table></div></section>'+box("Weekly reflections",s.weeklySummaries.filter(x=>manager||x.person===me).map(x=>'<div class="staff-item"><div class="spread"><b>'+e(x.person)+' · Week ending '+shortDate(x.weekEnding)+'</b>'+status(x.status)+'</div><p class="small">'+e(x.accomplishments)+'</p><p class="tiny muted">Linked Task Centre tasks: '+x.taskIds.map(k=>e(taskById(k)?.title||"Task")).join(", ")+' · Workload '+e(x.workload)+'/5 · Productivity '+e(x.productivity)+'/5</p><p class="tiny muted">Questions for BM: '+e(x.questions)+'</p>'+(manager&&x.status==="Submitted"?actionButton("Manager review","staff-review-week",x.id):"")+'</div>').join("")||blank("No weekly reflections submitted."))+formBox("shift-completion",h)+formBox("shift-review",h)+formBox("weekly",h)+formBox("weekly-review",h);
     }
     if(page==="staff-roster"){
-      return header("Roster & availability","Manage working patterns, shifts and weekly coverage.",formAction("availability","Set availability"))
-       +formBox("availability",h)
+      return header("Roster & availability","Manage working patterns, shifts and weekly coverage.",formAction("availability","Set availability")+(manager?formAction("roster","Schedule shift"):""))
+       +formBox("availability",h)+formBox("roster",h)
        +'<div class="two-col">'+box("Upcoming roster",s.roster.map(x=>'<div class="staff-item"><div class="spread"><b>'+e(x.person)+'</b>'+status(x.team)+'</div><div class="small muted">'+shortDate(x.day)+' · '+e(x.start)+'–'+e(x.end)+'</div></div>').join(""))+box("Weekly availability",s.availability.map(x=>'<div class="staff-item"><b>'+e(x.person)+'</b> · '+e(x.day)+'<div class="muted small">'+e(x.start)+'–'+e(x.end)+'</div></div>').join(""))+'</div>';
     }
     if(page==="staff-leave"){
@@ -256,7 +257,11 @@
   const formFields={
     shift:[["taskId","Task Centre task","task"],["hours","Hours worked","number"],["summary","Work completed","textarea"],["remaining","Remaining work","textarea"],["blockers","Blockers","textarea"],["questions","Questions for manager","textarea"],["selfRating","Productivity self-rating (1–5)","rating"]],
     "shift-review":[["managerRating","Manager productivity assessment","rating"],["reviewNote","Manager notes","textarea"]],
+    "shift-completion":[["summary","Work completed","textarea"],["remaining","Remaining work","textarea"],["blockers","Blockers","textarea"],["questions","Questions for Business Manager","textarea"],["selfRating","Productivity self-rating (1–5)","rating"]],
+    weekly:[["weekEnding","Week ending","date"],["accomplishments","Weekly accomplishments","textarea"],["remaining","Remaining priorities","textarea"],["blockers","Blockers","textarea"],["questions","Questions for Business Manager","textarea"],["workload","Busyness / workload (1–5)","rating"],["productivity","Productivity self-rating (1–5)","rating"]],
+    "weekly-review":[["managerRating","Manager productivity assessment","rating"],["reviewNote","Manager feedback","textarea"]],
     availability:[["day","Weekday","select:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday"],["start","Available from","time"],["end","Available until","time"]],
+    roster:[["person","Staff member","person"],["day","Shift date","date"],["start","Start","time"],["end","End","time"],["team","Team","select:Paid Media|Organic Studio|Lead Engine|Closing|Client Success|Operations"]],
     leave:[["type","Leave type","select:Annual|Sick|Unpaid|Other"],["start","Start date","date"],["end","End date","date"],["reason","Reason","textarea"]],
     kpi:[["metric","KPI","kpi"],["actual","Actual value","number"],["evidence","Evidence and context","textarea"]],
     goal:[["title","Development goal","text"],["milestone","Next measurable milestone","textarea"],["privacy","Visibility","select:Shared with manager|Private to employee"]],
@@ -303,7 +308,7 @@
       const selector=typeof document!=="undefined"&&document.querySelector("#staff-task-select");
       const taskId=selector?.value||s.selectedTask;
       const task=h.data.tasks.find(x=>x.id===taskId);
-      if(!task){notice("Choose an existing Task Centre task.");return true;}
+      if(!task||(!manager&&task.assignee!==me)){notice("Choose a task assigned to you.");return true;}
       s.selectedTask=taskId;s.timer={id:makeId(),person:me,taskId,account:task.account,startedAt:new Date().toISOString()};audit("Started work on "+task.title,role);done("Task timer started.");return true;
     }
     if(action==="staff-stop"){
@@ -313,7 +318,17 @@
       s.shifts.unshift({id:makeId(),person:t.person,day:nowDay(),hours:Math.round(minutes/60*100)/100,taskIds:[t.taskId],status:"Needs summary",summary:"",remaining:"",blockers:"",questions:"",selfRating:"",managerRating:"",reviewNote:""});
       s.timer=null;audit("Stopped task timer and generated shift",role);done("Work logged. Add a shift summary in Timesheets.");return true;
     }
+    if(action==="staff-complete-shift"){
+      const x=look(s.shifts);
+      if(!x||x.person!==me||x.status!=="Needs summary"){notice("Choose one of your unfinished shift summaries.");return true;}
+      s.form="shift-completion";s.formTarget=value;h.goto("timesheets");s.form="shift-completion";s.formTarget=value;h.render();return true;
+    }
+    if(action==="staff-review-week"){
+      if(!manager){notice("Manager review only.");return true;}
+      s.form="weekly-review";s.formTarget=value;h.goto("timesheets");s.form="weekly-review";s.formTarget=value;h.render();return true;
+    }
     if(action==="staff-review-shift"){
+      if(!manager){notice("Manager review only.");return true;}
       s.form="shift-review";s.formTarget=value;h.goto("timesheets");s.form="shift-review";s.formTarget=value;h.render();return true;
     }
     if(action==="staff-approve-leave"){managerOnly(()=>{const x=look(s.leave);if(x&&x.status==="Pending")x.status="Approved";audit("Approved leave request",role);done("Leave approved in demo.");});return true;}
@@ -345,6 +360,20 @@
     if(kind==="shift"){
       if(!values.taskId||Number(values.hours)<0)return reject("Choose a task and valid hours.");
       add("shifts",{person:me,day:nowDay(),hours:Number(values.hours),taskIds:[values.taskId],summary:values.summary,remaining:values.remaining,blockers:values.blockers,questions:values.questions,selfRating:Number(values.selfRating),status:"Submitted",managerRating:"",reviewNote:""});
+    }else if(kind==="shift-completion"){
+      const x=s.shifts.find(x=>x.id===s.formTarget);
+      if(!x||x.person!==me||x.status!=="Needs summary")return reject("Choose your unfinished shift.");
+      x.summary=values.summary;x.remaining=values.remaining;x.blockers=values.blockers;x.questions=values.questions;x.selfRating=Number(values.selfRating);x.status="Submitted";
+    }else if(kind==="weekly"){
+      const start=new Date(values.weekEnding);start.setDate(start.getDate()-7);
+      const taskIds=[...new Set(s.shifts.filter(x=>x.person===me&&new Date(x.day)>=start&&new Date(x.day)<=new Date(values.weekEnding)).flatMap(x=>x.taskIds))];
+      if(!taskIds.length)return reject("Record task-linked shifts during the week first.");
+      add("weeklySummaries",{person:me,weekEnding:values.weekEnding,taskIds,accomplishments:values.accomplishments,remaining:values.remaining,blockers:values.blockers,questions:values.questions,workload:Number(values.workload),productivity:Number(values.productivity),managerRating:"",reviewNote:"",status:"Submitted"});
+    }else if(kind==="weekly-review"){
+      if(!manager)return reject("Only managers can review weekly reflections.");
+      const x=s.weeklySummaries.find(x=>x.id===s.formTarget);
+      if(!x||x.status!=="Submitted")return reject("Choose a submitted weekly summary.");
+      x.managerRating=Number(values.managerRating);x.reviewNote=values.reviewNote;x.status="Approved";
     }else if(kind==="shift-review"){
       if(!manager)return reject("Only managers can review submitted summaries.");
       const x=s.shifts.find(x=>x.id===s.formTarget);
@@ -353,6 +382,10 @@
     }else if(kind==="availability"){
       if(values.start>=values.end)return reject("End time must be later than start time.");
       add("availability",{person:me,day:values.day,start:values.start,end:values.end});
+    }else if(kind==="roster"){
+      if(!manager)return reject("Only managers can schedule roster shifts.");
+      if(values.start>=values.end)return reject("Shift end must follow start.");
+      add("roster",{person:values.person,day:values.day,start:values.start,end:values.end,team:values.team});
     }else if(kind==="leave"){
       if(values.end<values.start)return reject("Leave end date must be on or after the start date.");
       add("leave",{person:me,type:values.type,start:values.start,end:values.end,reason:values.reason,status:"Pending"});

@@ -157,6 +157,14 @@ const sections = {
  staff:[['MY WORK',[['overview','Overview','grid'],['tasks','My tasks','tasks'],['calendar','Calendar','calendar'],['clients','Assigned clients','users']]],['DELIVERY',[['paid','Paid advertising','megaphone'],['organic','Organic studio','pen'],['leads','Lead engine','target'],['closing','Closing pipeline','phone'],['approvals','Approvals','checkcircle'],['projects','Projects','layers']]],['TOOLS',[['assets','Files & assets','folder'],['messages','Messages','messages'],['reports','Reports','chart'],['support','Support','support'],['settings','Settings','settings']]]],
  client:[['MY WORKSPACE',[['overview','Overview','grid'],['services','My services','layers'],['projects','Projects','briefcase'],['approvals','Approvals','checkcircle']]],['MY RESULTS',[['paid','Paid advertising','megaphone'],['organic','Organic growth','pen'],['leads','My leads','target'],['closing','Sales pipeline','phone'],['calendar','Content calendar','calendar'],['reports','Reports','chart']]],['COLLABORATION',[['tasks','Tasks','tasks'],['assets','Files & assets','folder'],['messages','Messages','messages'],['billing','Billing','wallet'],['support','Support','support'],['settings','Settings','settings']]]]
 };
+const staffGroups = ["MY WORK","DEVELOPMENT","TEAM","DELIVERY","MANAGEMENT"];
+for(const role of ["management","staff"]){
+ for(const group of staffGroups){
+  const restricted=["staff-recruitment","staff-approvals","staff-people-reports","staff-access"];
+  const items=(window.AmplifyStaff?.catalog||[]).filter(x=>x[3]===group&&(role==="management"||!restricted.includes(x[0]))).map(([key,label,ico])=>[key,label,ico]);
+  if(items.length)sections[role].push(["STAFF · "+group,items]);
+ }
+}
 const navItems=()=>sections[state.role].map(([heading,items])=>[heading,items.filter(([key])=>!({paid:'paid',organic:'organic',leads:'leads',closing:'closing'}[key])||subscribed(key))]).filter(([,items])=>items.length);
 const pageTitle = () => (navItems().flatMap(x=>x[1]).find(x=>x[0]===state.page)||['','Workspace'])[1];
 const pill=(s)=>{const v=String(s||'');const cls=/^(active|approved|paid|won|done|published|scheduled|qualified)$/i.test(v)?'green':/^(pending|review|awaiting|onboarding|proposal|draft|in progress|submitted|medium)$/i.test(v)?'yellow':/^(overdue|lost|cancelled|high|changes requested)$/i.test(v)?'red':'purple';return '<span class="pill '+cls+'">'+esc(v)+'</span>';};
@@ -308,6 +316,8 @@ function settingsPage(){
  +panel('Release readiness','<div class="step-list">'+[['Responsive UI navigation',true],['Service delivery screens',true],['Demo workflows and approvals',true],['Real authentication',false],['Supabase tenant security validated',false],['Stripe and ad platform integration',false],['Production deployment and end-to-end QA',false]].map(([text,done],i)=>'<div class="step-row"><span class="step-dot '+(done?'done':'')+'">'+(done?icon('check',12):i+1)+'</span>'+text+'</div>').join('')+'</div>');
 }
 const renderers={overview,services:servicesPage,clients:clientsPage,crm:agencyCRM,projects:projectsPage,calendar:calendarPage,paid:campaignsPage,organic:organicPage,leads:leadsPage,closing:closingPage,approvals:approvalsPage,tasks:tasksPage,assets:assetsPage,messages:messagesPage,reports:reportsPage,billing:billingPage,team:teamPage,support:supportPage,settings:settingsPage};
+const staffEnvironment=()=>({state,data,esc,icon,pill,button,topHeader,panel,valueCard,tabular,td,date,money,accountName,render,goto,notify});
+for(const [key] of window.AmplifyStaff?.catalog||[])renderers[key]=()=>window.AmplifyStaff.render(key,staffEnvironment());
 function render(){
  const currentPage=state.page==='client-detail'?'Client profile':pageTitle();
  const sidebar='<aside class="sidebar '+(state.sidebar?'open':'')+'" id="sidebar" aria-label="Workspace navigation"><div class="brand"><span class="brand-symbol">Ω</span><div><div class="brand-title">Amplify</div><div class="brand-sub">OMEGA SYSTEMS</div></div></div>'+navItems().map(([heading,items])=>'<div class="menu-block"><div class="menu-label">'+esc(heading)+'</div>'+items.map(([k,label,ico])=>'<button class="side-link '+(state.page===k?'active':'')+'" data-action="nav" data-id="'+k+'" '+(state.page===k?'aria-current="page"':'')+'>'+icon(ico,17)+' '+esc(label)+'</button>').join('')+'</div>').join('')+'<div class="sidebar-bottom"><div class="side-profile"><div class="avatar">Ω</div><div class="profile-meta"><b>Amplify workspace</b><small>'+esc(roleLabel())+' · Demo</small></div></div></div></aside>';
@@ -385,6 +395,7 @@ document.addEventListener('click',e=>{
   if(e.target?.dataset?.backdrop){state.modal='';state.command=false;render();}return;
  }
  const action=el.dataset.action, value=el.dataset.id;
+ if(action.startsWith('staff-')&&window.AmplifyStaff?.click(action,value,staffEnvironment()))return;
  if(action==='nav'){goto(value);return;}
  if(action==='toggle-menu'){state.sidebar=!state.sidebar;render();return;}
  if(action==='switch-client'){state.role='client';state.account=value;goto('overview');return;}
@@ -394,7 +405,7 @@ document.addEventListener('click',e=>{
  if(action==='toggle-notifications'){state.notification=!state.notification;state.modal='';render();return;}
  if(action==='command'){state.command=true;state.commandQuery='';renderCommand();return;}
  if(action==='close-dialog'){state.modal='';state.command=false;state.modalId=null;render();return;}
- if(action==='reset-demo'){if(confirm('Reset demo data stored in this browser?')){data=initial();save();goto('overview');notify('Demo data reset.');}return;}
+ if(action==='reset-demo'){if(confirm('Reset demo data stored in this browser?')){data=initial();window.AmplifyStaff?.reset();save();goto('overview');notify('Demo data reset.');}return;}
  if(action==='export-leads'){csv(scoped(data.leads).map(x=>({Name:x.name,Company:x.company,Client:accountName(x.account),Source:x.source,Stage:x.stage,Value:x.value})),'amplify-demo-leads.csv');return;}
  if(action==='export-report'){csv(scoped(data.campaigns).map(x=>({Campaign:x.name,Client:accountName(x.account),Channel:x.channel,Spend:x.spend,Leads:x.leads,ROAS:x.roas})),'amplify-demo-report.csv');return;}
  if(action==='next-lead'){if(state.role!=='client')advance(data.leads,value,leadStages);return;}
@@ -409,7 +420,7 @@ document.addEventListener('click',e=>{
  if(forms[action]){state.modal=action;state.modalId=value;renderModal();return;}
 });
 document.addEventListener('change',e=>{
- if(e.target.id==='role-select'){state.role=e.target.value;if(state.role==='client'&&state.account==='all')state.account=data.accounts[0]?.id||'a';state.page='overview';state.query='';state.filter='All';render();}
+ if(e.target.id==='role-select'){state.role=e.target.value;if(state.role==='client'&&state.account==='all')state.account=data.accounts[0]?.id||'a';state.page=state.role==='staff'?'staff-hub':'overview';state.query='';state.filter='All';render();}
  if(e.target.id==='account-select'){state.account=e.target.value;state.page='overview';state.query='';render();}
  if(e.target.id==='page-filter'){state.filter=e.target.value;render();}
 });
@@ -418,6 +429,11 @@ document.addEventListener('input',e=>{
  if(e.target.id==='command-input'){state.commandQuery=e.target.value;renderCommand();$('#command-input')?.setSelectionRange(state.commandQuery.length,state.commandQuery.length);}
 });
 document.addEventListener('submit',e=>{
+ if(e.target.id==='staff-form'){
+  e.preventDefault();
+  window.AmplifyStaff?.submit(e.target.dataset.staffForm,Object.fromEntries(new FormData(e.target).entries()),staffEnvironment());
+  return;
+ }
  if(e.target.id==='modal-form'){e.preventDefault();const kind=e.target.dataset.kind;const values=Object.fromEntries(new FormData(e.target).entries());createFromForm(kind,values);}
  if(e.target.id==='message-form'){e.preventDefault();const text=$('#message-input')?.value?.trim();if(!text)return;const account=state.account==='all'?'a':state.account;data.messages.push({id:id(),account,from:state.role==='client'?'Client':'Staff',text,at:new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit'})});save();render();notify('Message saved to demo conversation.');}
 });

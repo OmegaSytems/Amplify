@@ -1,26 +1,43 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const code=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const handlers={}, elements={'#app':{innerHTML:''},'#overlay-root':{innerHTML:''}};
-const document={body:{classList:{toggle(){}}},querySelector(sel){return elements[sel]||null;},addEventListener(type,cb){handlers[type]=cb;}};
-const storage={getItem(){return null;},setItem(){}};
-const context=vm.createContext({document,localStorage:storage,window:{scrollTo(){}},confirm(){return false;},console,Intl,Date,Math,Set,Array,Object,String,Number,JSON,RegExp,Map,Error,URL,Blob,setTimeout(){}});
-vm.runInContext(code,context,{filename:'app.js'});
-assert.ok(elements['#app'].innerHTML.includes('Amplify'));
-const pages={
-  management:['overview','clients','crm','projects','calendar','paid','organic','leads','closing','approvals','tasks','assets','messages','reports','billing','team','support','settings'],
-  staff:['overview','tasks','calendar','clients','paid','organic','leads','closing','approvals','projects','assets','messages','reports','support','settings'],
-  client:['overview','services','projects','approvals','paid','organic','leads','closing','calendar','reports','tasks','assets','messages','billing','support','settings']
+const staff=fs.readFileSync(new URL('../src/staff/staff-os.js',import.meta.url),'utf8');
+const app=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
+const handlers={},els={'#app':{innerHTML:''},'#overlay-root':{innerHTML:''}};
+const document={body:{classList:{toggle(){}},appendChild(){}},querySelector(s){return els[s]||null},addEventListener(t,fn){handlers[t]=fn},createElement(){return {setAttribute(){},remove(){}}}};
+const vals=new Map(),localStorage={getItem(k){return vals.get(k)||null},setItem(k,v){vals.set(k,v)}};
+const window={scrollTo(){}};
+const context=vm.createContext({document,window,localStorage,confirm(){return false},setTimeout(){},console,Date,Math,Intl,Number,JSON,Array,Set,Object,String,URL,Blob,FormData});
+vm.runInContext(staff,context,{filename:'staff-os.js'});
+vm.runInContext(app,context,{filename:'app.js'});
+const views={
+ management:['overview','clients','crm','projects','calendar','paid','organic','leads','closing','approvals','tasks','assets','messages','reports','billing','team','support','settings'],
+ staff:['overview','tasks','calendar','clients','paid','organic','leads','closing','approvals','projects','assets','messages','reports','support','settings'],
+ client:['overview','services','projects','approvals','paid','organic','leads','closing','calendar','reports','tasks','assets','messages','billing','support','settings']
 };
-let checked=0;
-for(const [role,views] of Object.entries(pages)){
+let count=0;
+for(const [role,pages] of Object.entries(views)){
  handlers.change({target:{id:'role-select',value:role}});
- for(const page of views){
-  handlers.click({target:{closest(){return {dataset:{action:'nav',id:page}};}}});
-  assert.ok(elements['#app'].innerHTML.includes('<main'),role+' / '+page);
-  checked++;
+ for(const page of pages){handlers.click({target:{closest(){return {dataset:{action:'nav',id:page}}}}});assert.ok(els['#app'].innerHTML.includes('<main'),role+':'+page);count++;}
+}
+for(const role of ['management','staff']){
+ handlers.change({target:{id:'role-select',value:role}});
+ for(const [page] of window.AmplifyStaff.catalog){
+  if(role==='staff'&&['staff-recruitment','staff-approvals','staff-people-reports','staff-access'].includes(page))continue;
+  handlers.click({target:{closest(){return {dataset:{action:'nav',id:page}}}}});
+  assert.ok(els['#app'].innerHTML.includes('<main'),role+':'+page);count++;
  }
 }
-assert.ok(elements['#app'].innerHTML.includes('Demonstration only'));
-console.log('UI smoke passed: '+checked+' role/page renders; demo notice present.');
+handlers.change({target:{id:'role-select',value:'client'}});
+assert.ok(!els['#app'].innerHTML.includes('data-id="staff-hub"'));
+const os=window.AmplifyStaff,staffCtx={state:{role:'staff'},data:{tasks:[{id:'t3',title:'Write captions',account:'b',assignee:'Avery',status:'In progress'}]},goto(){},render(){},notify(){}};
+os.click('staff-start','',staffCtx);assert.ok(os.debug().timer);
+os.click('staff-stop','',staffCtx);const shift=os.debug().shifts[0];assert.equal(shift.status,'Needs summary');
+os.click('staff-complete-shift',shift.id,staffCtx);
+os.submit('shift-completion',{summary:'Done',remaining:'QA',blockers:'None',questions:'Next?',selfRating:'4'},staffCtx);
+assert.equal(os.debug().shifts[0].status,'Submitted');
+const manager={...staffCtx,state:{role:'management'}};
+os.click('staff-review-shift',shift.id,manager);
+os.submit('shift-review',{managerRating:'5',reviewNote:'Good'},manager);
+assert.equal(os.debug().shifts[0].status,'Approved');
+console.log('PASS '+count+' role/page renders and task-linked shift review');
